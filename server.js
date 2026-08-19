@@ -121,13 +121,23 @@ function initializeGee() {
 //    Lazy-evaluated so ee.* is never called before initialization.
 // ---------------------------------------------------------------------------
 function getHcmcGeometry() {
-  return ee.FeatureCollection('FAO/GAUL/2015/level2')
+  const baseGeom = ee.FeatureCollection('FAO/GAUL/2015/level2')
     .filter(ee.Filter.or(
       ee.Filter.eq('ADM1_NAME', 'Ho Chi Minh City'),
       ee.Filter.eq('ADM1_NAME', 'Binh Duong'),
       ee.Filter.eq('ADM1_NAME', 'Ba Ria-Vung Tau')
     ))
     .geometry();
+
+  // Can Gio Sea Reclamation Tourist Area Extension (Khu đô thị du lịch lấn biển Cần Giờ)
+  const canGioReclamation = ee.Geometry.Polygon([
+    [106.81, 10.33],
+    [106.97, 10.33],
+    [106.97, 10.42],
+    [106.81, 10.42]
+  ]);
+
+  return baseGeom.union(canGioReclamation);
 }
 
 // ---------------------------------------------------------------------------
