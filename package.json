@@ -1,0 +1,24 @@
+{
+  "name": "gee-district4-analysis",
+  "version": "1.0.0",
+  "description": "Phân tích ảnh vệ tinh Quận 4 bằng Google Earth Engine",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google/earthengine": "^0.1.391",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "google-auth-library": "^10.6.2"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

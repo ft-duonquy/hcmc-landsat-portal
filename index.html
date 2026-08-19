@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HCMC Landsat Portal — Cổng thông tin Giám sát Đảo nhiệt Đô thị TP.HCM</title>
+    <meta name="description" content="Hệ thống Web GIS nghiên cứu khoa học phân tích chỉ số thực vật NDVI, nhiệt độ bề mặt LST và chỉ số tổn thương nhiệt UTFVI trên địa bàn Thành phố Hồ Chí Minh sử dụng Google Earth Engine." />
+    <meta name="author" content="HCMC Landsat Portal Team" />
+    
+    <!-- Google Fonts: Be Vietnam Pro and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+      /* --- Design Tokens & System --- */
+      :root {
+        --bg-color: #080c14;
+        --card-bg: rgba(15, 23, 42, 0.75);
+        --card-border: rgba(255, 255, 255, 0.08);
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --accent-color: #3b82f6;
+        --accent-glow: rgba(59, 130, 246, 0.35);
+        --success: #10b981;
+        --success-glow: rgba(16, 185, 129, 0.2);
+        --error: #ef4444;
+        --warning: #f59e0b;
+        --font-sans: 'Be Vietnam Pro', 'Inter', -apple-system, sans-serif;
+        --font-display: 'Be Vietnam Pro', 'Inter', sans-serif;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* --- Dashboard Layout --- */
+      .dashboard {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        height: 100vh;
+        width: 100vw;
+        position: relative;
+      }
+
+      /* Sidebar styling */
+      .sidebar {
+        background-color: #0b0f19;
+        border-right: 1px solid var(--card-border);
+        padding: 1.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        overflow-y: auto;
+        z-index: 10;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Title header with gradient and glow */
+      .brand-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--card-border);
+        padding-bottom: 1.25rem;
+      }
+
+      .brand-title {
+        font-family: var(--font-display);
+        font-size: 1.55rem;
+        font-weight: 800;
+        line-height: 1.25;
+        background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #1d4ed8 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.01em;
+        text-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+      }
+
+      .brand-subtitle {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        font-weight: 400;
+        line-height: 1.4;
+      }order-radius: 50%;
+        box-shadow: 0 0 8px var(--success);
+        animation: pulse 2s infinite;
+      }
+
+      /* Main content wrapper containing map */
+      .map-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background-color: #111827;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* --- Control Cards & Toggles --- */
+      .section-title {
+        font-family: var(--font-display);
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+      }
+
+      .controls-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .control-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.85rem;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .control-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background-color: transparent;
+        transition: var(--transition);
+      }
+
+      .control-card:hover {
+        background-color: rgba(30, 41, 59, 0.7);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .control-card.active {
+        background-color: rgba(59, 130, 246, 0.1);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 15px var(--accent-glow);
+      }
+
+      .control-card.active::before {
+        background-color: var(--accent-color);
+      }
+
+      .control-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background-color: rgba(255, 255, 255, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .control-card.active .control-icon {
+        background-color: var(--accent-color);
+        color: white;
+        border-color: transparent;
+        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+      }
+
+      .control-card.active .control-icon svg {
+        stroke: #ffffff;
+      }
+
+      .control-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .control-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+      }
+
+      .control-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        line-height: 1.35;
+      }
+
+      /* --- Mode Selector & Switch --- */
+      .mode-selector-group {
+        margin-bottom: 1.25rem;
+      }
+      .mode-toggle-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: var(--transition);
+      }
+      .mode-toggle-card:hover {
+        border-color: rgba(59, 130, 246, 0.4);
+      }
+      .mode-toggle-card.active {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
+        border-color: #3b82f6;
+      }
+      .mode-toggle-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+      }
+      .mode-toggle-title {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+      }
+      .mode-toggle-desc {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+      }
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 38px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #334155;
+        transition: .3s;
+        border-radius: 20px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #3b82f6;
+      }
+      input:checked + .slider:before {
+        transform: translateX(18px);
+      }
+
+      /* --- Status Panel --- */
+      .status-panel {
+        background-color: rgba(30, 41, 59, 0.3);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        transition: var(--transition);
+      }
+
+      .status-panel.loading {
+        border-color: rgba(245, 158, 11, 0.3);
+        color: var(--warning);
+      }
+
+      .status-panel.success {
+        border-color: rgba(16, 185, 129, 0.3);
+        color: var(--success);
+      }
+
+      .status-panel.error {
+        border-color: rgba(239, 68, 68, 0.3);
+        color: var(--error);
+      }
+
+      .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .status-panel.loading .status-indicator {
+        background-color: var(--warning);
+        box-shadow: 0 0 8px var(--warning);
+        animation: pulse 1.5s infinite;
+      }
+
+      .status-panel.success .status-indicator {
+        background-color: var(--success);
+        box-shadow: 0 0 8px var(--success);
+      }
+
+      .status-panel.error .status-indicator {
+        background-color: var(--error);
+        box-shadow: 0 0 8px var(--error);
+      }
+
+      /* --- Dynamic Legend --- */
+      .legend-panel {
+        margin-top: auto;
+        background: linear-gradient(to bottom, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: none;
+        flex-direction: column;
+        gap: 0.75rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: var(--transition);
+      }
+
+      .legend-panel.visible {
+        display: flex;
+        animation: slideUp 0.4s ease-out forwards;
+      }
+
+      .legend-title {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+      }
+
+      .legend-desc {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        line-height: 1.4;
+      }
+
+      .gradient-bar {
+        height: 14px;
+        border-radius: 6px;
+        width: 100%;
+        margin: 0.5rem 0;
+        overflow: hidden;
+        border: none;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+        background-clip: padding-box;
+      }
+
+      /* Gradients definitions */
+      .ndvi-gradient {
+        background: linear-gradient(to right, #ffffff 0%, #e5f5e0 25%, #a1d99b 50%, #31a354 75%, #006d2c 100%);
+      }
+
+      .lst-gradient {
+        background: linear-gradient(to right, #2c7bb6 0%, #abd9e9 25%, #ffffbf 50%, #fdae61 75%, #d7191c 100%);
+      }
+
+      .scale-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.68rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        gap: 0.25rem;
+      }
+
+      .sidebar-footer {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid var(--card-border);
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        text-align: center;
+        opacity: 0.75;
+        font-weight: 400;
+        letter-spacing: 0.01em;
+      }
+
+      .utfvi-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+      }
+
+      .utfvi-item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      .color-box {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        flex-shrink: 0;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+
+      .utfvi-item .label {
+        font-size: 0.73rem;
+        color: var(--text-secondary);
+        line-height: 1.2;
+      }
+
+      /* --- Spinner Loading Overlay --- */
+      .map-spinner-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(8, 12, 20, 0.6);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .map-spinner-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .spinner-core {
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(59, 130, 246, 0.15);
+        border-radius: 50%;
+        border-top-color: var(--accent-color);
+        animation: spin 1s linear infinite;
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+      }
+
+      .spinner-text {
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 0.95rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #f8fafc;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      /* --- Error Banner --- */
+      .error-banner {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background-color: rgba(239, 68, 68, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 1rem;
+        max-width: 400px;
+        color: white;
+        z-index: 1001;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: flex;
+        gap: 0.75rem;
+        transform: translateX(120%);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .error-banner.visible {
+        transform: translateX(0);
+      }
+
+      .error-icon {
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      .error-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .error-title {
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+
+      .error-desc {
+        font-size: 0.78rem;
+        opacity: 0.9;
+        line-height: 1.4;
+      }
+
+      /* --- Keyframes & Animations --- */
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.92); }
+      }
+
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Leaflet overwrite to fit styled dark aesthetics */
+      .leaflet-container {
+        font-family: var(--font-sans) !important;
+      }
+
+      /* --- Leaflet Layer Control — dark theme override --- */
+      .leaflet-control-layers {
+        background: rgba(11, 15, 25, 0.92) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.45) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: var(--text-primary) !important;
+        font-family: var(--font-sans) !important;
+        font-size: 0.8rem !important;
+        overflow: hidden;
+      }
+      .leaflet-control-layers-toggle {
+        background-color: rgba(11,15,25,0.92) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: 8px !important;
+        width: 36px !important;
+        height: 36px !important;
+      }
+      .leaflet-control-layers-expanded {
+        padding: 0.75rem 1rem !important;
+      }
+      .leaflet-control-layers label {
+        color: var(--text-primary) !important;
+        padding: 0.25rem 0 !important;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+      .leaflet-control-layers label:hover { color: var(--accent-color) !important; }
+      .leaflet-control-layers-separator {
+        border-top: 1px solid var(--card-border) !important;
+        margin: 0.4rem 0 !important;
+      }
+      .leaflet-control-zoom a {
+        background: rgba(11,15,25,0.92) !important;
+        border: 1px solid var(--card-border) !important;
+        color: var(--text-primary) !important;
+        border-radius: 6px !important;
+      }
+      .leaflet-control-zoom a:hover {
+        background: var(--accent-color) !important;
+        color: #fff !important;
+      }
+
+      /* --- Year Selector Widget --- */
+      .year-selector-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+
+      .year-select-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .year-select-icon {
+        position: absolute;
+        left: 0.75rem;
+        pointer-events: none;
+        color: var(--accent-color);
+        flex-shrink: 0;
+      }
+
+      #year-select {
+        width: 100%;
+        appearance: none;
+        -webkit-appearance: none;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        font-size: 0.92rem;
+        font-weight: 600;
+        padding: 0.65rem 2.5rem 0.65rem 2.4rem;
+        cursor: pointer;
+        transition: var(--transition);
+        outline: none;
+      }
+
+      #year-select:hover,
+      #year-select:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+      }
+
+      /* Custom dropdown chevron */
+      .year-select-wrapper::after {
+        content: '';
+        position: absolute;
+        right: 0.9rem;
+        pointer-events: none;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid var(--text-secondary);
+        border-bottom: 2px solid var(--text-secondary);
+        transform: rotate(45deg) translateY(-3px);
+        transition: var(--transition);
+      }
+
+      .year-hint {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        line-height: 1.3;
+      }
+
+      /* Responsive layout for smaller screens */
+      @media(max-width: 900px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr;
+          overflow: auto;
+        }
+        .sidebar {
+          height: auto;
+          max-height: 55vh;
+          border-right: none;
+          border-bottom: 1px solid var(--card-border);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        body {
+          overflow: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <!-- Sidebar Control Panel -->
+      <aside class="sidebar">
+        <header class="brand-header">
+          <h1 class="brand-title">HCMC Landsat Portal</h1>
+          <div class="brand-subtitle">Cổng thông tin Giám sát Đảo nhiệt Đô thị và Thảm thực vật TP. Hồ Chí Minh</div>
+        </header>
+        
+        <!-- Status Indicator Panel -->
+        <div class="status-panel success" id="status-panel">
+          <span class="status-indicator"></span>
+          <span id="status-text">Đang kết nối hệ thống...</span>
+        </div>
+
+        <!-- Dynamic Year Selector -->
+        <div class="year-selector-group">
+          <div class="section-title">Năm phân tích</div>
+          <div class="year-select-wrapper">
+            <span class="year-select-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </span>
+            <select id="year-select" aria-label="Chọn năm phân tích">
+              <option value="2025" selected>2025 (Mặc định)</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+              <option value="2020">2020</option>
+              <option value="2019">2019</option>
+              <option value="2018">2018</option>
+            </select>
+          </div>
+          <div class="year-hint">Thay đổi năm sẽ tự động tải lại lớp đang hiển thị.</div>
+        </div>
+        
+        <!-- Display Mode Selector (Focus Mode / Pitch Black Isolation) -->
+        <div class="mode-selector-group">
+          <div class="section-title">Chế độ hiển thị</div>
+          <div class="mode-toggle-card" id="btn-focus-mode">
+            <div class="mode-toggle-info">
+              <div class="mode-toggle-title">🎯 Tập trung chỉ số (Focus Mode)</div>
+              <div class="mode-toggle-desc">Tối đen 100% nền, chỉ cô lập lớp chỉ số</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="focus-mode-checkbox">
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Interactive Layers Menu -->
+        <div class="controls-group">
+          <div class="section-title">Lớp bản đồ phân tích</div>
+          
+          <!-- Card NDVI -->
+          <div class="control-card active" id="btn-ndvi">
+            <div class="control-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 2-8 10h5l-4 8h14l-4-8h5z"/>
+                <path d="M12 20v2"/>
+              </svg>
+            </div>
+            <div class="control-details">
+              <span class="control-name">Mảng xanh (NDVI)</span>
+              <span class="control-desc">Chỉ số thực vật thể hiện thảm phủ tự nhiên của thành phố.</span>
+            </div>
+          </div>
+
+          <!-- Card LST -->
+          <div class="control-card" id="btn-lst">
+            <div class="control-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+              </svg>
+            </div>
+            <div class="control-details">
+              <span class="control-name">Nhiệt độ bề mặt (LST)</span>
+              <span class="control-desc">Nhiệt độ mặt đất thực tế tính từ kênh hồng ngoại nhiệt Landsat.</span>
+            </div>
+          </div>
+
+          <!-- Card UTFVI -->
+          <div class="control-card" id="btn-utfvi">
+            <div class="control-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div class="control-details">
+              <span class="control-name">Tổn thương sinh thái (UTFVI)</span>
+              <span class="control-desc">Chỉ số định lượng mức độ ảnh hưởng của đảo nhiệt đến môi trường sinh thái.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Legend Container -->
+        <div class="legend-panel" id="dynamic-legend">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Sidebar Copyright Footer -->
+        <footer class="sidebar-footer">
+          © 2026–2027 LQD_Nhóm 48. All rights reserved.
+        </footer>
+      </aside>
+
+      <!-- Map Viewer Section -->
+      <main class="map-container">
+        <!-- Leaflet Map Div -->
+        <div id="map"></div>
+
+        <!-- Glassmorphic Map Loading Spinner -->
+        <div class="map-spinner-overlay" id="map-spinner">
+          <div class="spinner-core"></div>
+          <div class="spinner-text">Đang tải dữ liệu GEE...</div>
+        </div>
+
+        <!-- Error Notification Banner -->
+        <div class="error-banner" id="error-banner">
+          <div class="error-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div class="error-content">
+            <div class="error-title">Lỗi vận hành hệ thống</div>
+            <div class="error-desc" id="error-message">Mất kết nối với Google Earth Engine.</div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Leaflet Library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Entry Script for Web App -->
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
