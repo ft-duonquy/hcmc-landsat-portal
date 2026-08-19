@@ -468,8 +468,8 @@ app.get('/api/boundary', checkGee, async (req, res) => {
   }
 });
 
-// Fallback SPA route: Serve index.html from dist folder for any non-API routes
-app.get('*', (req, res, next) => {
+// Fallback SPA route: Serve index.html from dist folder for any non-API routes (Express 5 compatible)
+app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
