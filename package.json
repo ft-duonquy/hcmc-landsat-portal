@@ -16,9 +16,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "google-auth-library": "^10.6.2"
-  },
-  "devDependencies": {
+    "google-auth-library": "^10.6.2",
     "vite": "^5.0.0"
   }
 }
