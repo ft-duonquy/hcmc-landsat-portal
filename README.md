@@ -1,4 +1,4 @@
-# Phân tích ảnh vệ tinh Quận 4 bằng Google Earth Engine
+# Phân tích ảnh vệ tinh TpHCM bằng Google Earth Engine
 
 Dự án này đã được refactor từ mã nguồn Script GEE truyền thống thành một cấu trúc dự án Web (Node.js/Vite) hiện đại, chuẩn Clean Code, để sẵn sàng đẩy lên GitHub và triển khai trên Vercel.
 
