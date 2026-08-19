@@ -129,12 +129,15 @@ function getHcmcGeometry() {
     ))
     .geometry();
 
-  // Can Gio Sea Reclamation Tourist Area Extension (Khu đô thị du lịch lấn biển Cần Giờ)
+  // Tight curved polygon specifically wrapping Can Gio Sea Reclamation Tourist Area (Khu đô thị du lịch lấn biển Cần Giờ)
   const canGioReclamation = ee.Geometry.Polygon([
-    [106.81, 10.33],
-    [106.97, 10.33],
-    [106.97, 10.42],
-    [106.81, 10.42]
+    [106.875, 10.395],
+    [106.885, 10.355],
+    [106.915, 10.345],
+    [106.955, 10.355],
+    [106.970, 10.400],
+    [106.920, 10.410],
+    [106.875, 10.395]
   ]);
 
   return baseGeom.union(canGioReclamation);
