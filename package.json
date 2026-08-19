@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "start": "node server.js"
+    "start": "npm run build && node server.js"
   },
   "dependencies": {
     "@google/earthengine": "^0.1.391",

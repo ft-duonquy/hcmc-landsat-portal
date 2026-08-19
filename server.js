@@ -2,13 +2,21 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import ee from '@google/earthengine';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load environment variables from .env.local
+// Load environment variables from .env.local (or system environment in production)
 dotenv.config({ path: '.env.local' });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve static frontend files from 'dist' directory when deployed
+app.use(express.static(path.join(__dirname, 'dist')));
 
 const PORT = process.env.PORT || 5000;
 
@@ -458,6 +466,12 @@ app.get('/api/boundary', checkGee, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Fallback SPA route: Serve index.html from dist folder for any non-API routes
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // ---------------------------------------------------------------------------
