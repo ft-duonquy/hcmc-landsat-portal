@@ -20,8 +20,10 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 const PORT = process.env.PORT || 5000;
 
-const clientEmail = process.env.VITE_EE_CLIENT_EMAIL;
-const privateKey  = process.env.VITE_EE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+const clientEmail = process.env.VITE_EE_CLIENT_EMAIL?.trim();
+const privateKey  = process.env.VITE_EE_PRIVATE_KEY
+  ? process.env.VITE_EE_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '').trim()
+  : undefined;
 
 // ─── VN2000 National Coordinate System Config ────────────────
 const VN2000_CENTRAL_MERIDIANS = {
@@ -490,16 +492,18 @@ app.use((req, res, next) => {
 // ---------------------------------------------------------------------------
 // 7. Start
 // ---------------------------------------------------------------------------
-initializeGee()
-  .then(() => {
-    // Flush stale cache on startup so the new 3-province mosaic is computed fresh
-    clearCache();
-    app.listen(PORT, () => {
-      console.log(`Backend server running on http://localhost:${PORT}`);
-      console.log('ROI: Ho Chi Minh City + Binh Duong + Ba Ria-Vung Tau (2026 expanded boundary)');
+// Bind Express immediately to process.env.PORT on 0.0.0.0 so Render.com proxy gets instant HTTP status 200
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend server running on http://0.0.0.0:${PORT}`);
+  console.log('ROI: Ho Chi Minh City + Binh Duong + Ba Ria-Vung Tau (2026 expanded boundary)');
+
+  // Initialize GEE asynchronously
+  initializeGee()
+    .then(() => {
+      clearCache();
+      console.log('Google Earth Engine initialization complete and cache cleared!');
+    })
+    .catch((err) => {
+      console.error('GEE initialization error:', err.message);
     });
-  })
-  .catch((err) => {
-    console.error('Fatal: GEE initialization failed. Server cannot start.', err);
-    process.exit(1);
-  });
+});
