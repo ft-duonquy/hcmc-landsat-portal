@@ -273,6 +273,27 @@ const spinner         = document.getElementById('map-spinner');
 const errorBanner     = document.getElementById('error-banner');
 const errorMessage    = document.getElementById('error-message');
 const legendContainer = document.getElementById('dynamic-legend');
+const mobileToggleBtn = document.getElementById('mobile-toggle-btn');
+const sidebar         = document.querySelector('.sidebar');
+let mobileOverlay     = document.querySelector('.mobile-overlay');
+
+if (!mobileOverlay) {
+  mobileOverlay = document.createElement('div');
+  mobileOverlay.className = 'mobile-overlay';
+  document.body.appendChild(mobileOverlay);
+}
+
+if (mobileToggleBtn && sidebar) {
+  const toggleMobileSidebar = (open) => {
+    const isOpen = open !== undefined ? open : !sidebar.classList.contains('mobile-open');
+    sidebar.classList.toggle('mobile-open', isOpen);
+    mobileOverlay.classList.toggle('active', isOpen);
+  };
+
+  mobileToggleBtn.addEventListener('click', () => toggleMobileSidebar());
+  mobileOverlay.addEventListener('click', () => toggleMobileSidebar(false));
+}
+
 const yearSelect      = document.getElementById('year-select');
 const focusCheckbox   = document.getElementById('focus-mode-checkbox');
 const focusCard       = document.getElementById('btn-focus-mode');
