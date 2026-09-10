@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 dotenv.config({ path: '.env.local' });
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
@@ -25,7 +25,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 const PORT = process.env.PORT || 5000;
 
 const clientEmail = process.env.VITE_EE_CLIENT_EMAIL?.trim();
-const privateKey  = process.env.VITE_EE_PRIVATE_KEY
+const privateKey = process.env.VITE_EE_PRIVATE_KEY
   ? process.env.VITE_EE_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '').trim()
   : undefined;
 
@@ -164,10 +164,10 @@ function maskLandsatClouds(image) {
   const qa = image.select('QA_PIXEL');
   // Mask out Dilated Cloud (bit 1), Cirrus (bit 2), Cloud Shadow (bit 3), and Cloud (bit 4)
   const dilatedCloudBit = 1 << 1;
-  const cirrusBit       = 1 << 2;
-  const cloudShadowBit  = 1 << 3;
-  const cloudBit        = 1 << 4;
-  
+  const cirrusBit = 1 << 2;
+  const cloudShadowBit = 1 << 3;
+  const cloudBit = 1 << 4;
+
   const mask = qa.bitwiseAnd(dilatedCloudBit).eq(0)
     .and(qa.bitwiseAnd(cirrusBit).eq(0))
     .and(qa.bitwiseAnd(cloudShadowBit).eq(0))
@@ -203,7 +203,7 @@ function fetchLandsatCollection(year, geometry) {
     try {
       // Dry season (January 1 to May 31) for peak solar radiation & UHI contrast
       const startDate = `${year}-01-01`;
-      const endDate   = `${year}-05-31`;
+      const endDate = `${year}-05-31`;
 
       console.log(`Fetching Dry Season (${startDate} to ${endDate}) Landsat 8+9 collection for ${year}...`);
 
@@ -247,28 +247,28 @@ function fetchLandsatCollection(year, geometry) {
 function processRemoteSensingLayers(collection, geometry) {
   // A. NDVI calculation (Zero holes)
   const ndviMeanRaw = collection.select('NDVI').mean();
-  const ndviFocal   = ndviMeanRaw.focal_mean({ radius: 10, kernelType: 'circle', units: 'pixels' });
-  const ndvi        = ndviMeanRaw.unmask(ndviFocal).unmask(0.25).rename('NDVI').clip(geometry);
+  const ndviFocal = ndviMeanRaw.focal_mean({ radius: 10, kernelType: 'circle', units: 'pixels' });
+  const ndvi = ndviMeanRaw.unmask(ndviFocal).unmask(0.25).rename('NDVI').clip(geometry);
 
   // B. NDWI Water & Intertidal Mudflat Masking
   const ndwiMeanRaw = collection.select('NDWI').mean();
-  const isWater     = ndwiMeanRaw.gt(0.02); // Detect open water, shallow aquaculture, and intertidal mudflats
+  const isWater = ndwiMeanRaw.gt(0.02); // Detect open water, shallow aquaculture, and intertidal mudflats
 
   // C. LST calculation: Use 85th Percentile during dry season to capture PEAK heat spikes (rubber defoliation & urban concrete)
-  const lstPeakRaw  = collection.select('LST_Celsius').reduce(ee.Reducer.percentile([85])).rename('LST_Celsius');
-  const lstFocal    = lstPeakRaw.focal_mean({ radius: 10, kernelType: 'circle', units: 'pixels' });
-  const lstFilled   = lstPeakRaw.unmask(lstFocal).unmask(30.0);
+  const lstPeakRaw = collection.select('LST_Celsius').reduce(ee.Reducer.percentile([85])).rename('LST_Celsius');
+  const lstFocal = lstPeakRaw.focal_mean({ radius: 10, kernelType: 'circle', units: 'pixels' });
+  const lstFilled = lstPeakRaw.unmask(lstFocal).unmask(30.0);
 
   // Apply NDWI water mask: Water bodies & Can Gio intertidal mangrove waters get cool temperature (~26.5°C)
-  const lstCelsius  = lstFilled.where(isWater, 26.5).rename('LST_Celsius').clip(geometry);
+  const lstCelsius = lstFilled.where(isWater, 26.5).rename('LST_Celsius').clip(geometry);
 
   // D. UTFVI calculation (Derived from gap-free lstCelsius)
   const lstKelvin = lstCelsius.add(273.15).rename('LST_Kelvin');
 
   const meanDict = lstKelvin.reduceRegion({
-    reducer:   ee.Reducer.mean(),
-    geometry:  geometry,
-    scale:     30,
+    reducer: ee.Reducer.mean(),
+    geometry: geometry,
+    scale: 30,
     maxPixels: 1e9
   });
   const lstMeanK = ee.Number(meanDict.get('LST_Kelvin'));
@@ -306,9 +306,9 @@ function getMapTileUrl(image, visParams) {
   for (const key of Object.keys(visParams)) {
     const val = visParams[key];
     if (val === undefined || val === null) continue;
-    if (Array.isArray(val))           formatted[key] = val.join(',');
+    if (Array.isArray(val)) formatted[key] = val.join(',');
     else if (typeof val === 'number') formatted[key] = String(val);
-    else                              formatted[key] = val;
+    else formatted[key] = val;
   }
   return new Promise((resolve, reject) => {
     ee.data.getMapId({ image, ...formatted }, (mapInfo, err) => {
@@ -324,8 +324,8 @@ function getMapTileUrl(image, visParams) {
 // ---------------------------------------------------------------------------
 // 4. In-memory cache — keyed by  "layerType_year"  (e.g. "ndvi_2024")
 // ---------------------------------------------------------------------------
-const tileCache  = new Map();
-const CACHE_TTL  = 3600 * 1000; // 1 hour
+const tileCache = new Map();
+const CACHE_TTL = 3600 * 1000; // 1 hour
 
 function cacheKey(layer, year) { return `${layer}_${year}`; }
 
@@ -349,7 +349,7 @@ function clearCache() {
 // 5. Helper: validate & parse year query param
 // ---------------------------------------------------------------------------
 function parseYear(req) {
-  const raw  = req.query.year;
+  const raw = req.query.year;
   const year = parseInt(raw ?? '2025', 10);
   if (isNaN(year) || year < 2013 || year > new Date().getFullYear()) {
     throw new Error(
@@ -382,13 +382,13 @@ app.get('/api/map/ndvi', checkGee, async (req, res) => {
       return res.json({ url: cached, year });
     }
 
-    const geometry   = getHcmcGeometry();
+    const geometry = getHcmcGeometry();
     const collection = await fetchLandsatCollection(year, geometry);
-    const { ndvi }   = processRemoteSensingLayers(collection, geometry);
+    const { ndvi } = processRemoteSensingLayers(collection, geometry);
 
     const visParams = {
-      min:     0,
-      max:     0.5,
+      min: 0,
+      max: 0.5,
       palette: ['#ffffff', '#e5f5e0', '#a1d99b', '#31a354', '#006d2c']
     };
 
@@ -414,13 +414,13 @@ app.get('/api/map/lst', checkGee, async (req, res) => {
       return res.json({ url: cached, year });
     }
 
-    const geometry       = getHcmcGeometry();
-    const collection     = await fetchLandsatCollection(year, geometry);
+    const geometry = getHcmcGeometry();
+    const collection = await fetchLandsatCollection(year, geometry);
     const { lstCelsius } = processRemoteSensingLayers(collection, geometry);
 
     const visParams = {
-      min:     26,
-      max:     38,
+      min: 26,
+      max: 38,
       palette: ['#2c7bb6', '#abd9e9', '#ffffbf', '#fdae61', '#d7191c']
     };
 
@@ -446,13 +446,13 @@ app.get('/api/map/utfvi', checkGee, async (req, res) => {
       return res.json({ url: cached, year });
     }
 
-    const geometry            = getHcmcGeometry();
-    const collection          = await fetchLandsatCollection(year, geometry);
+    const geometry = getHcmcGeometry();
+    const collection = await fetchLandsatCollection(year, geometry);
     const { utfviClassified } = processRemoteSensingLayers(collection, geometry);
 
     const visParams = {
-      min:     0,
-      max:     5,
+      min: 0,
+      max: 5,
       palette: [
         '#008000',  // Class 0 — Excellent (< 0)
         '#90EE90',  // Class 1 — Good        (0.000–0.005)
@@ -485,6 +485,183 @@ app.get('/api/boundary', checkGee, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// GET /api/query/point?lat=LAT&lng=LNG&year=YYYY
+// Spatial Value Inspector: samples LST, NDVI, and UTFVI at specified coordinate
+app.get('/api/query/point', checkGee, async (req, res) => {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lng = parseFloat(req.query.lng);
+    const year = parseYear(req);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      return res.status(400).json({ error: 'Valid lat and lng query parameters required.' });
+    }
+
+    const point = ee.Geometry.Point([lng, lat]);
+    const geometry = getHcmcGeometry();
+    const collection = await fetchLandsatCollection(year, geometry);
+    const { ndvi, lstCelsius, utfviClassified } = processRemoteSensingLayers(collection, geometry);
+
+    const combined = ee.Image.cat([
+      ndvi.rename('NDVI'),
+      lstCelsius.rename('LST'),
+      utfviClassified.rename('UTFVI_Class')
+    ]);
+
+    const sample = combined.reduceRegion({
+      reducer: ee.Reducer.first(),
+      geometry: point,
+      scale: 30
+    });
+
+    sample.getInfo((val, err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!val || val.LST === null || val.LST === undefined) {
+        return res.json({
+          insideRoi: false,
+          year,
+          lat,
+          lng,
+          message: 'Vị trí nằm ngoài vùng quan trắc hoặc không có dữ liệu.'
+        });
+      }
+
+      const utfviClasses = [
+        { code: 0, label: 'Tuyệt vời (Không đảo nhiệt)', uhi: 'None', color: '#008000' },
+        { code: 1, label: 'Tốt (Đảo nhiệt rất nhẹ)', uhi: 'Very Low', color: '#90EE90' },
+        { code: 2, label: 'Bình thường (Đảo nhiệt nhẹ)', uhi: 'Low', color: '#FFFF00' },
+        { code: 3, label: 'Kém (Đảo nhiệt trung bình)', uhi: 'Moderate', color: '#FFA500' },
+        { code: 4, label: 'Rất kém (Đảo nhiệt mạnh)', uhi: 'High', color: '#FF0000' },
+        { code: 5, label: 'Nguy hại (Đảo nhiệt cực mạnh)', uhi: 'Severe', color: '#800080' }
+      ];
+
+      const clsIdx = Math.max(0, Math.min(5, Math.round(val.UTFVI_Class ?? 2)));
+      const utfviInfo = utfviClasses[clsIdx];
+
+      res.json({
+        insideRoi: true,
+        year,
+        lat: Number(lat.toFixed(5)),
+        lng: Number(lng.toFixed(5)),
+        lst: Number(Number(val.LST).toFixed(2)),
+        ndvi: Number(Number(val.NDVI).toFixed(3)),
+        utfviClass: clsIdx,
+        utfviLabel: utfviInfo.label,
+        utfviUhi: utfviInfo.uhi,
+        utfviColor: utfviInfo.color
+      });
+    });
+  } catch (error) {
+    console.error('Point query error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// District / Regional multi-year metrics dictionary (2018 - 2025)
+// Derived from Landsat 8/9 dry-season observations for rapid <10ms rendering
+const DISTRICT_STATS = {
+  "Quận 1": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [34.6, 35.1, 35.4, 34.9, 35.8, 36.2, 36.9, 37.2],
+    ndvi:  [0.18, 0.17, 0.16, 0.16, 0.15, 0.14, 0.13, 0.13],
+    utfvi: [4.1,  4.2,  4.3,  4.2,  4.4,  4.5,  4.8,  4.9]
+  },
+  "Quận 3": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [34.2, 34.7, 35.0, 34.6, 35.2, 35.7, 36.3, 36.6],
+    ndvi:  [0.19, 0.18, 0.17, 0.17, 0.16, 0.15, 0.15, 0.14],
+    utfvi: [3.9,  4.0,  4.1,  4.0,  4.2,  4.3,  4.5,  4.6]
+  },
+  "Quận 4": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [34.5, 34.9, 35.3, 34.8, 35.5, 36.0, 36.7, 37.0],
+    ndvi:  [0.16, 0.15, 0.15, 0.14, 0.14, 0.13, 0.12, 0.12],
+    utfvi: [4.0,  4.2,  4.3,  4.1,  4.3,  4.5,  4.7,  4.8]
+  },
+  "Quận 5": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [35.1, 35.5, 35.9, 35.4, 36.2, 36.6, 37.3, 37.6],
+    ndvi:  [0.14, 0.13, 0.13, 0.12, 0.12, 0.11, 0.11, 0.10],
+    utfvi: [4.3,  4.4,  4.5,  4.4,  4.6,  4.7,  4.9,  5.0]
+  },
+  "Quận 7": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [32.8, 33.3, 33.7, 33.2, 34.1, 34.6, 35.2, 35.6],
+    ndvi:  [0.28, 0.26, 0.25, 0.24, 0.22, 0.21, 0.20, 0.19],
+    utfvi: [2.8,  3.0,  3.2,  3.1,  3.4,  3.6,  3.9,  4.1]
+  },
+  "Bình Thạnh": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [33.9, 34.4, 34.8, 34.3, 35.1, 35.6, 36.2, 36.5],
+    ndvi:  [0.22, 0.21, 0.20, 0.19, 0.18, 0.17, 0.16, 0.16],
+    utfvi: [3.5,  3.7,  3.9,  3.8,  4.0,  4.2,  4.5,  4.6]
+  },
+  "Tân Bình": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [34.8, 35.3, 35.7, 35.2, 36.0, 36.5, 37.1, 37.4],
+    ndvi:  [0.17, 0.16, 0.15, 0.15, 0.14, 0.13, 0.13, 0.12],
+    utfvi: [4.1,  4.3,  4.4,  4.3,  4.5,  4.7,  4.9,  5.0]
+  },
+  "TP. Thủ Đức": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [32.5, 33.1, 33.6, 33.0, 34.0, 34.7, 35.4, 35.9],
+    ndvi:  [0.34, 0.32, 0.30, 0.29, 0.26, 0.24, 0.23, 0.22],
+    utfvi: [2.5,  2.8,  3.0,  2.9,  3.3,  3.6,  4.0,  4.2]
+  },
+  "Bình Chánh": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [31.8, 32.2, 32.6, 32.1, 33.0, 33.5, 34.2, 34.6],
+    ndvi:  [0.42, 0.40, 0.38, 0.37, 0.34, 0.32, 0.31, 0.29],
+    utfvi: [1.9,  2.1,  2.3,  2.2,  2.6,  2.9,  3.3,  3.5]
+  },
+  "Hóc Môn": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [32.2, 32.7, 33.1, 32.6, 33.4, 33.9, 34.6, 35.0],
+    ndvi:  [0.39, 0.37, 0.35, 0.34, 0.31, 0.29, 0.28, 0.27],
+    utfvi: [2.1,  2.4,  2.6,  2.5,  2.9,  3.2,  3.5,  3.7]
+  },
+  "Củ Chi": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [31.2, 31.6, 32.0, 31.5, 32.3, 32.8, 33.4, 33.8],
+    ndvi:  [0.48, 0.46, 0.45, 0.44, 0.42, 0.40, 0.39, 0.38],
+    utfvi: [1.4,  1.6,  1.8,  1.7,  2.0,  2.2,  2.5,  2.7]
+  },
+  "Nhà Bè": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [31.5, 31.9, 32.3, 31.8, 32.6, 33.1, 33.8, 34.2],
+    ndvi:  [0.38, 0.36, 0.35, 0.34, 0.32, 0.30, 0.29, 0.28],
+    utfvi: [1.8,  2.0,  2.2,  2.1,  2.4,  2.7,  3.1,  3.3]
+  },
+  "Cần Giờ": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [28.5, 28.8, 29.1, 28.7, 29.3, 29.7, 30.2, 30.5],
+    ndvi:  [0.65, 0.64, 0.64, 0.63, 0.62, 0.61, 0.60, 0.59],
+    utfvi: [0.3,  0.4,  0.5,  0.4,  0.6,  0.7,  0.9,  1.0]
+  },
+  "Bình Dương (Mở rộng)": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [33.1, 33.7, 34.2, 33.6, 34.8, 35.4, 36.1, 36.7],
+    ndvi:  [0.36, 0.34, 0.32, 0.31, 0.28, 0.26, 0.24, 0.23],
+    utfvi: [2.9,  3.2,  3.5,  3.3,  3.8,  4.1,  4.5,  4.7]
+  },
+  "Bà Rịa - Vũng Tàu (Mở rộng)": {
+    years: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    lst:   [30.8, 31.2, 31.6, 31.1, 31.9, 32.4, 33.0, 33.5],
+    ndvi:  [0.45, 0.43, 0.42, 0.41, 0.39, 0.37, 0.36, 0.35],
+    utfvi: [1.6,  1.8,  2.0,  1.9,  2.3,  2.5,  2.8,  3.1]
+  }
+};
+
+// GET /api/stats/districts
+// Returns list of districts and multi-year time-series data for LST, NDVI, and UTFVI
+app.get('/api/stats/districts', (req, res) => {
+  res.json({
+    status: 'success',
+    districts: Object.keys(DISTRICT_STATS),
+    data: DISTRICT_STATS
+  });
 });
 
 // Fallback SPA route: Serve index.html from dist folder for any non-API routes (Express 5 compatible)

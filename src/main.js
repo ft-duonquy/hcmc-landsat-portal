@@ -109,8 +109,11 @@ const overlays = {
   '⚠️ Tổn thương sinh thái (UTFVI)': utfviGroup
 };
 
+// State for active basemap (default: Google Satellite)
+let activeBasemapName = '🛰️ Ảnh vệ tinh (Google)';
+
 // Add default basemap: Google Satellite
-basemaps['🛰️ Ảnh vệ tinh (Google)'].addTo(map);
+basemaps[activeBasemapName].addTo(map);
 
 // Strictly split Layer Control: base layers and overlays
 const layerControl = L.control.layers(basemaps, overlays, {
@@ -133,13 +136,14 @@ function updateLabelsVisibility(basemapName) {
   }
 }
 
-// Listen to basemap changes to manage reference labels
+// Listen to basemap changes to manage reference labels and remember active basemap
 map.on('baselayerchange', (e) => {
+  activeBasemapName = e.name;
   updateLabelsVisibility(e.name);
 });
 
 // Initial label check (default is Google Satellite, so reference labels are visible)
-updateLabelsVisibility('🛰️ Ảnh vệ tinh (Google)');
+updateLabelsVisibility(activeBasemapName);
 
 // ─── VN2000 Coordinate System Configuration ──────────────────
 const VN2000_CENTRAL_MERIDIANS = {
@@ -251,10 +255,11 @@ function applyFocusMode(isFocus) {
       if (layer.setOpacity) layer.setOpacity(1.0);
     });
   } else {
-    // Standard mode: restore OSM basemap and labels
+    // Standard mode: restore previously active basemap and its labels
     mapElement.style.backgroundColor = '';
-    basemaps['🗺️ Bản đồ đường phố (OSM)'].addTo(map);
-    referenceLabels.addTo(map);
+    const basemapToRestore = basemaps[activeBasemapName] || basemaps['🛰️ Ảnh vệ tinh (Google)'];
+    basemapToRestore.addTo(map);
+    updateLabelsVisibility(activeBasemapName);
 
     const activeGroup = currentLayerKey === 'ndvi' ? ndviGroup : (currentLayerKey === 'lst' ? lstGroup : utfviGroup);
     activeGroup.eachLayer(layer => {
@@ -501,6 +506,398 @@ map.on('overlayremove', (e) => {
   }
 });
 
+// ─── Feature 1: Spatial Value Inspector (Point Query Tooltip) ──
+let inspectorPopup = null;
+
+map.on('click', async (e) => {
+  const { lat, lng } = e.latlng;
+  const currentYear = yearSelect.value || '2025';
+
+  // Show temporary loading popup
+  inspectorPopup = L.popup({
+    className: 'gis-inspector-popup',
+    offset: [0, -4],
+    closeButton: true
+  })
+    .setLatLng(e.latlng)
+    .setContent(`
+      <div class="inspector-card">
+        <div class="inspector-header">
+          <span class="inspector-title">Truy vấn tọa độ</span>
+          <span class="inspector-coord">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:0.74rem; color:#94a3b8; padding: 6px 0;">
+          <span class="status-indicator warning" style="animation: pulse 1s infinite;"></span>
+          Đang lấy mẫu raster GEE (Năm ${currentYear})...
+        </div>
+      </div>
+    `)
+    .openOn(map);
+
+  try {
+    const res = await fetch(`/api/query/point?lat=${lat}&lng=${lng}&year=${currentYear}`);
+    const data = await res.json();
+
+    if (!data || !data.insideRoi) {
+      inspectorPopup.setContent(`
+        <div class="inspector-card">
+          <div class="inspector-header">
+            <span class="inspector-title">Truy vấn tọa độ</span>
+            <span class="inspector-coord">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
+          </div>
+          <div style="font-size:0.74rem; color:#f87171; padding: 4px 0;">
+            ${data.message || 'Điểm nằm ngoài phạm vi quan trắc TP.HCM.'}
+          </div>
+        </div>
+      `);
+      return;
+    }
+
+    inspectorPopup.setContent(`
+      <div class="inspector-card">
+        <div class="inspector-header">
+          <span class="inspector-title">Chỉ số Pixel (${data.year})</span>
+          <span class="inspector-coord">${data.lat}, ${data.lng}</span>
+        </div>
+        <div class="inspector-grid">
+          <div class="inspector-row">
+            <span class="inspector-label">Nhiệt độ bề mặt (LST):</span>
+            <span class="inspector-val" style="color: #f87171;">${data.lst} °C</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-label">Chỉ số mảng xanh (NDVI):</span>
+            <span class="inspector-val" style="color: #4ade80;">${data.ndvi}</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-label">Tổn thương nhiệt (UTFVI):</span>
+            <span class="inspector-badge" style="background-color: ${data.utfviColor}; color: ${data.utfviClass >= 3 ? '#ffffff' : '#0f172a'};">
+              ${data.utfviLabel}
+            </span>
+          </div>
+          <div class="inspector-row" style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
+            <span>Mức đảo nhiệt:</span>
+            <span style="font-weight:600; color:#cbd5e1;">${data.utfviUhi}</span>
+          </div>
+        </div>
+      </div>
+    `);
+  } catch (err) {
+    if (inspectorPopup) {
+      inspectorPopup.setContent(`
+        <div class="inspector-card">
+          <div class="inspector-header">
+            <span class="inspector-title">Lỗi kết nối</span>
+          </div>
+          <div style="font-size:0.72rem; color:#f87171;">Không thể tải dữ liệu pixel: ${err.message}</div>
+        </div>
+      `);
+    }
+  }
+});
+
+// ─── Feature 2: Split-Screen Synchronized Map Comparison ───────
+let mapLeft = null;
+let mapRight = null;
+let leftGeeLayer = null;
+let rightGeeLayer = null;
+let isSyncing = false; // Prevents infinite event recursion loop
+let compareCursorMarkerLeft = null;
+let compareCursorMarkerRight = null;
+
+const compareOverlay      = document.getElementById('compare-overlay');
+const btnOpenCompare      = document.getElementById('btn-open-compare');
+const btnCloseCompare     = document.getElementById('btn-close-compare');
+const compareYearLeft     = document.getElementById('compare-year-left');
+const compareYearRight    = document.getElementById('compare-year-right');
+const compareLayerSelect  = document.getElementById('compare-layer-select');
+const labelMapLeft        = document.getElementById('label-map-left');
+const labelMapRight       = document.getElementById('label-map-right');
+
+function initCompareMaps() {
+  if (mapLeft && mapRight) return;
+
+  const currentCenter = map.getCenter();
+  const currentZoom   = map.getZoom();
+
+  // Create Left Map
+  mapLeft = L.map('compare-map-left', {
+    zoomControl: true,
+    attributionControl: false
+  }).setView(currentCenter, currentZoom);
+
+  // Create Right Map
+  mapRight = L.map('compare-map-right', {
+    zoomControl: false,
+    attributionControl: false
+  }).setView(currentCenter, currentZoom);
+
+  // Base layers for compare maps
+  L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(mapLeft);
+  L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(mapRight);
+
+  // Synchronized crosshairs
+  const crosshairIcon = L.divIcon({
+    className: 'compare-crosshair',
+    html: '<div style="width:12px;height:12px;border:2px solid #38bdf8;border-radius:50%;box-shadow:0 0 8px #38bdf8;transform:translate(-6px,-6px);"></div>',
+    iconSize: [0, 0]
+  });
+
+  compareCursorMarkerLeft  = L.marker(currentCenter, { icon: crosshairIcon, interactive: false }).addTo(mapLeft);
+  compareCursorMarkerRight = L.marker(currentCenter, { icon: crosshairIcon, interactive: false }).addTo(mapRight);
+
+  // Bi-directional view sync with isSyncing flag
+  function syncView(sourceMap, targetMap) {
+    if (isSyncing) return;
+    isSyncing = true;
+    targetMap.setView(sourceMap.getCenter(), sourceMap.getZoom(), { animate: false });
+    isSyncing = false;
+  }
+
+  mapLeft.on('move', () => syncView(mapLeft, mapRight));
+  mapRight.on('move', () => syncView(mapRight, mapLeft));
+
+  // Bi-directional crosshair pointer tracking
+  mapLeft.on('mousemove', (e) => {
+    compareCursorMarkerLeft.setLatLng(e.latlng);
+    compareCursorMarkerRight.setLatLng(e.latlng);
+  });
+  mapRight.on('mousemove', (e) => {
+    compareCursorMarkerLeft.setLatLng(e.latlng);
+    compareCursorMarkerRight.setLatLng(e.latlng);
+  });
+}
+
+async function loadCompareLayers() {
+  const layerType = compareLayerSelect.value;
+  const yearL = compareYearLeft.value;
+  const yearR = compareYearRight.value;
+
+  const typeLabels = {
+    lst: 'LST (°C)',
+    ndvi: 'NDVI',
+    utfvi: 'UTFVI'
+  };
+
+  labelMapLeft.textContent  = `${yearL} - ${typeLabels[layerType]}`;
+  labelMapRight.textContent = `${yearR} - ${typeLabels[layerType]}`;
+
+  try {
+    const [resL, resR] = await Promise.all([
+      fetch(`/api/map/${layerType}?year=${yearL}`).then(r => r.json()),
+      fetch(`/api/map/${layerType}?year=${yearR}`).then(r => r.json())
+    ]);
+
+    if (leftGeeLayer) mapLeft.removeLayer(leftGeeLayer);
+    if (rightGeeLayer) mapRight.removeLayer(rightGeeLayer);
+
+    if (resL.url) {
+      leftGeeLayer = L.tileLayer(resL.url, { opacity: 0.85, maxZoom: 20 }).addTo(mapLeft);
+    }
+    if (resR.url) {
+      rightGeeLayer = L.tileLayer(resR.url, { opacity: 0.85, maxZoom: 20 }).addTo(mapRight);
+    }
+  } catch (err) {
+    console.error('Error loading compare layers:', err);
+  }
+}
+
+function openCompareMode() {
+  compareOverlay.classList.add('active');
+  initCompareMaps();
+  setTimeout(() => {
+    mapLeft.invalidateSize();
+    mapRight.invalidateSize();
+    mapLeft.setView(map.getCenter(), map.getZoom(), { animate: false });
+    loadCompareLayers();
+  }, 100);
+}
+
+function closeCompareMode() {
+  compareOverlay.classList.remove('active');
+}
+
+btnOpenCompare?.addEventListener('click', openCompareMode);
+btnCloseCompare?.addEventListener('click', closeCompareMode);
+compareYearLeft?.addEventListener('change', loadCompareLayers);
+compareYearRight?.addEventListener('change', loadCompareLayers);
+compareLayerSelect?.addEventListener('change', loadCompareLayers);
+
+// ─── Feature 3: Regional Time-Series Chart (Quận/Huyện) ─────────
+const districtModal       = document.getElementById('district-modal');
+const btnOpenDistrictModal = document.getElementById('btn-open-district-chart');
+const btnCloseDistrictModal = document.getElementById('btn-close-district-modal');
+const districtSelect      = document.getElementById('district-select');
+const chartTabBtns        = document.querySelectorAll('.chart-tab-btn');
+
+let districtChartInstance = null;
+let districtDataCache = null;
+let currentChartMetric = 'lst';
+
+async function fetchDistrictStats() {
+  if (districtDataCache) return districtDataCache;
+  try {
+    const res = await fetch('/api/stats/districts');
+    const json = await res.json();
+    districtDataCache = json;
+    
+    // Populate district select
+    districtSelect.innerHTML = '';
+    json.districts.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      districtSelect.appendChild(opt);
+    });
+    return json;
+  } catch (err) {
+    console.error('Error fetching district stats:', err);
+    return null;
+  }
+}
+
+function renderDistrictChart(districtName, metric) {
+  if (!districtDataCache) return;
+  const distInfo = districtDataCache.data[districtName];
+  if (!distInfo) return;
+
+  const canvas = document.getElementById('district-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  if (districtChartInstance) {
+    districtChartInstance.destroy();
+  }
+
+  const metricConfigs = {
+    lst: {
+      label: 'Nhiệt độ bề mặt trung bình (°C)',
+      data: distInfo.lst,
+      borderColor: '#f87171',
+      bgColor: 'rgba(248, 113, 113, 0.15)',
+      unit: '°C',
+      min: 25,
+      max: 40
+    },
+    ndvi: {
+      label: 'Chỉ số thực vật trung bình (NDVI)',
+      data: distInfo.ndvi,
+      borderColor: '#4ade80',
+      bgColor: 'rgba(74, 222, 128, 0.15)',
+      unit: '',
+      min: 0,
+      max: 0.8
+    },
+    utfvi: {
+      label: 'Mức tổn thương sinh thái (UTFVI Class)',
+      data: distInfo.utfvi,
+      borderColor: '#c084fc',
+      bgColor: 'rgba(192, 132, 252, 0.15)',
+      unit: '',
+      min: 0,
+      max: 5.5
+    }
+  };
+
+  const cfg = metricConfigs[metric];
+
+  // Chart.js Configuration
+  districtChartInstance = new window.Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: distInfo.years,
+      datasets: [{
+        label: `${cfg.label} - ${districtName}`,
+        data: cfg.data,
+        borderColor: cfg.borderColor,
+        backgroundColor: cfg.bgColor,
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: cfg.borderColor,
+        pointBorderColor: '#0f172a',
+        pointBorderWidth: 2,
+        pointRadius: 4.5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: '#cbd5e1',
+            font: { family: 'Inter', size: 12, weight: '600' }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#38bdf8',
+          bodyColor: '#f8fafc',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            label: (item) => `${cfg.label}: ${item.raw} ${cfg.unit}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(51, 65, 85, 0.3)' },
+          ticks: { color: '#94a3b8', font: { family: 'Inter' } }
+        },
+        y: {
+          min: cfg.min,
+          max: cfg.max,
+          grid: { color: 'rgba(51, 65, 85, 0.3)' },
+          ticks: {
+            color: '#94a3b8',
+            font: { family: 'Inter' },
+            callback: (val) => `${val} ${cfg.unit}`
+          }
+        }
+      }
+    }
+  });
+}
+
+async function openDistrictModal() {
+  districtModal.classList.add('active');
+  await fetchDistrictStats();
+  const selectedDistrict = districtSelect.value || 'Quận 1';
+  renderDistrictChart(selectedDistrict, currentChartMetric);
+}
+
+function closeDistrictModal() {
+  districtModal.classList.remove('active');
+}
+
+btnOpenDistrictModal?.addEventListener('click', openDistrictModal);
+btnCloseDistrictModal?.addEventListener('click', closeDistrictModal);
+
+districtModal?.addEventListener('click', (e) => {
+  if (e.target === districtModal) closeDistrictModal();
+});
+
+districtSelect?.addEventListener('change', () => {
+  renderDistrictChart(districtSelect.value, currentChartMetric);
+});
+
+chartTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    chartTabBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentChartMetric = btn.getAttribute('data-metric');
+    renderDistrictChart(districtSelect.value, currentChartMetric);
+  });
+});
+
 // ─── Initialization ───────────────────────────────────────────
 function init() {
   updateStatus('Sẵn sàng. Chọn một lớp bản đồ phân tích.', 'success');
@@ -527,6 +924,9 @@ function init() {
       loadGMapLayer(currentLayerKey, names[currentLayerKey], true);
     }
   });
+
+  // Pre-fetch district metrics in background so opening the modal is instant
+  fetchDistrictStats();
 
   // Load NDVI by default on startup
   loadGMapLayer('ndvi', 'Mảng xanh (NDVI)');

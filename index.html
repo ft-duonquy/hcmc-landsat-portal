@@ -15,6 +15,9 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
+    <!-- Chart.js for Regional Time-Series Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
       /* --- Professional GIS Slate Design System (Esri / Copernicus Style) --- */
       :root {
@@ -648,6 +651,281 @@
         color: #fff !important;
       }
 
+      /* --- Spatial Value Inspector Popup Styling --- */
+      .gis-inspector-popup .leaflet-popup-content-wrapper {
+        background: rgba(15, 23, 42, 0.96) !important;
+        border: 1px solid #334155 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6) !important;
+        padding: 4px !important;
+        color: #f8fafc !important;
+        backdrop-filter: blur(12px) !important;
+      }
+      .gis-inspector-popup .leaflet-popup-tip {
+        background: #0f172a !important;
+        border: 1px solid #334155 !important;
+      }
+      .inspector-card {
+        padding: 8px 10px;
+        min-width: 210px;
+        font-family: var(--font-sans);
+      }
+      .inspector-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 6px;
+        margin-bottom: 8px;
+      }
+      .inspector-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #38bdf8;
+      }
+      .inspector-coord {
+        font-size: 0.68rem;
+        color: #94a3b8;
+      }
+      .inspector-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .inspector-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.74rem;
+      }
+      .inspector-label {
+        color: #94a3b8;
+      }
+      .inspector-val {
+        font-weight: 700;
+        color: #f8fafc;
+      }
+      .inspector-badge {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.68rem;
+        font-weight: 700;
+      }
+
+      /* --- Advanced Tools Section in Sidebar --- */
+      .tool-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: rgba(30, 41, 59, 0.65);
+        border: 1px solid #334155;
+        border-radius: 6px;
+        color: #f8fafc;
+        font-size: 0.76rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: 6px;
+        text-align: left;
+      }
+      .tool-btn:hover {
+        background: #1e293b;
+        border-color: #38bdf8;
+        color: #38bdf8;
+      }
+      .tool-btn.active {
+        background: rgba(56, 189, 248, 0.15);
+        border-color: #38bdf8;
+        color: #38bdf8;
+      }
+      .tool-btn svg {
+        flex-shrink: 0;
+      }
+
+      /* --- Split-Screen Compare Mode Overlay Container --- */
+      .compare-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1050;
+        display: none;
+        background: #0b1329;
+      }
+      .compare-overlay.active {
+        display: flex;
+        flex-direction: column;
+      }
+      .compare-topbar {
+        height: 48px;
+        background: rgba(15, 23, 42, 0.96);
+        border-bottom: 1px solid #334155;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 10;
+        backdrop-filter: blur(10px);
+      }
+      .compare-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #f8fafc;
+      }
+      .compare-ctrl-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .compare-select {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #f8fafc;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.76rem;
+        cursor: pointer;
+      }
+      .compare-btn-close {
+        background: #ef4444;
+        border: none;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 4px;
+        font-size: 0.74rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .compare-btn-close:hover {
+        opacity: 0.85;
+      }
+      .compare-maps-wrapper {
+        flex: 1;
+        display: flex;
+        position: relative;
+        overflow: hidden;
+      }
+      .compare-pane {
+        flex: 1;
+        position: relative;
+        height: 100%;
+      }
+      .compare-pane-divider {
+        width: 3px;
+        background: #38bdf8;
+        z-index: 20;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+        position: relative;
+      }
+      .compare-label-tag {
+        position: absolute;
+        top: 12px;
+        z-index: 1000;
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid #334155;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #38bdf8;
+        pointer-events: none;
+        backdrop-filter: blur(6px);
+      }
+      .compare-label-left { left: 16px; }
+      .compare-label-right { right: 16px; }
+
+      /* --- District Time-Series Modal --- */
+      .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+      }
+      .modal-backdrop.active {
+        display: flex;
+      }
+      .modal-dialog {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 760px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+        overflow: hidden;
+      }
+      .modal-header {
+        padding: 14px 20px;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #1e293b;
+      }
+      .modal-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #f8fafc;
+      }
+      .modal-close-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+      }
+      .modal-close-btn:hover { color: #fff; }
+      .modal-body {
+        padding: 18px 20px;
+        overflow-y: auto;
+      }
+      .modal-controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .chart-container-box {
+        position: relative;
+        height: 320px;
+        width: 100%;
+      }
+      .chart-tab-btn {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #94a3b8;
+        padding: 5px 12px;
+        border-radius: 4px;
+        font-size: 0.74rem;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.15s ease;
+      }
+      .chart-tab-btn.active {
+        background: rgba(56, 189, 248, 0.18);
+        border-color: #38bdf8;
+        color: #38bdf8;
+      }
+
       /* Mobile Drawer Optimization */
       @media (max-width: 768px) {
         .sidebar {
@@ -680,6 +958,14 @@
         .map-skeleton-overlay {
           top: 60px;
           right: 12px;
+        }
+
+        .compare-topbar {
+          padding: 0 8px;
+          font-size: 0.75rem;
+        }
+        .compare-ctrl-group {
+          gap: 6px;
         }
       }
     </style>
@@ -791,6 +1077,26 @@
                 </div>
                 <span class="control-name">Tổn thương sinh thái (UTFVI)</span>
               </div>
+          <!-- Advanced Analytics Tools -->
+          <div class="layers-group">
+            <div class="section-label">Công cụ phân tích nâng cao</div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <button class="tool-btn" id="btn-open-compare" title="So sánh song song 2 mốc thời gian">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <line x1="12" y1="3" x2="12" y2="21"/>
+                </svg>
+                <span>So sánh 2 năm (Split-Screen)</span>
+              </button>
+
+              <button class="tool-btn" id="btn-open-district-chart" title="Xem biểu đồ biến thiên 2018 - 2025">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                <span>Biểu đồ chuỗi thời gian Quận/Huyện</span>
+              </button>
             </div>
           </div>
         </div>
@@ -824,6 +1130,98 @@
           </div>
         </div>
       </main>
+
+      <!-- Split-Screen Compare Mode Overlay -->
+      <div class="compare-overlay" id="compare-overlay">
+        <div class="compare-topbar">
+          <div class="compare-title-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="12" y1="3" x2="12" y2="21"/>
+            </svg>
+            <span>So sánh song song 2 mốc thời gian (Đồng bộ thời gian thực 60fps)</span>
+          </div>
+          <div class="compare-ctrl-group">
+            <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+              Trái:
+              <select id="compare-year-left" class="compare-select">
+                <option value="2018" selected>2018</option>
+                <option value="2019">2019</option>
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+              </select>
+            </label>
+            <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+              Phải:
+              <select id="compare-year-right" class="compare-select">
+                <option value="2018">2018</option>
+                <option value="2019">2019</option>
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+                <option value="2025" selected>2025</option>
+              </select>
+            </label>
+            <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+              Lớp:
+              <select id="compare-layer-select" class="compare-select">
+                <option value="lst" selected>Nhiệt độ (LST)</option>
+                <option value="ndvi">Mảng xanh (NDVI)</option>
+                <option value="utfvi">Tổn thương (UTFVI)</option>
+              </select>
+            </label>
+            <button class="compare-btn-close" id="btn-close-compare">✕ Đóng so sánh</button>
+          </div>
+        </div>
+        <div class="compare-maps-wrapper">
+          <div class="compare-pane" id="compare-map-left">
+            <div class="compare-label-tag compare-label-left" id="label-map-left">2018 - LST</div>
+          </div>
+          <div class="compare-pane-divider"></div>
+          <div class="compare-pane" id="compare-map-right">
+            <div class="compare-label-tag compare-label-right" id="label-map-right">2025 - LST</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- District Regional Time-Series Modal -->
+      <div class="modal-backdrop" id="district-modal">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <div class="modal-title">Biểu đồ xu hướng biến thiên Đảo nhiệt (2018 – 2025)</div>
+            <button class="modal-close-btn" id="btn-close-district-modal" aria-label="Đóng">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="modal-controls">
+              <label style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+                Quận / Huyện:
+                <select id="district-select" class="compare-select" style="font-size: 0.82rem; padding: 5px 10px;">
+                  <!-- Populated via JS -->
+                </select>
+              </label>
+              <div style="display: flex; gap: 6px; margin-left: auto;">
+                <button class="chart-tab-btn active" data-metric="lst">Nhiệt độ (LST °C)</button>
+                <button class="chart-tab-btn" data-metric="ndvi">Mảng xanh (NDVI)</button>
+                <button class="chart-tab-btn" data-metric="utfvi">Tổn thương (UTFVI)</button>
+              </div>
+            </div>
+            <div class="chart-container-box">
+              <canvas id="district-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Leaflet Library -->
