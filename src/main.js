@@ -74,13 +74,13 @@ L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 // ─── Basemap Layers ───────────────────────────────────────────
 const basemaps = {
-  '🗺️ Bản đồ đường phố (OSM)': L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    { maxZoom: 19, attribution: '© OpenStreetMap, Esri' }
-  ),
   '🛰️ Ảnh vệ tinh (Google)': L.tileLayer(
     'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
     { maxZoom: 20, attribution: '© Google Satellite' }
+  ),
+  '🗺️ Bản đồ đường phố (OSM)': L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: '© OpenStreetMap, Esri' }
   ),
   '🏔️ Địa hình (Esri Topo)': L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
@@ -109,8 +109,8 @@ const overlays = {
   '⚠️ Tổn thương sinh thái (UTFVI)': utfviGroup
 };
 
-// Add default basemap (OSM Street)
-basemaps['🗺️ Bản đồ đường phố (OSM)'].addTo(map);
+// Add default basemap: Google Satellite
+basemaps['🛰️ Ảnh vệ tinh (Google)'].addTo(map);
 
 // Strictly split Layer Control: base layers and overlays
 const layerControl = L.control.layers(basemaps, overlays, {
@@ -138,8 +138,8 @@ map.on('baselayerchange', (e) => {
   updateLabelsVisibility(e.name);
 });
 
-// Initial label check (default is OSM, so labels are hidden by default)
-updateLabelsVisibility('🗺️ Bản đồ đường phố (OSM)');
+// Initial label check (default is Google Satellite, so reference labels are visible)
+updateLabelsVisibility('🛰️ Ảnh vệ tinh (Google)');
 
 // ─── VN2000 Coordinate System Configuration ──────────────────
 const VN2000_CENTRAL_MERIDIANS = {
@@ -273,25 +273,31 @@ const spinner         = document.getElementById('map-spinner');
 const errorBanner     = document.getElementById('error-banner');
 const errorMessage    = document.getElementById('error-message');
 const legendContainer = document.getElementById('dynamic-legend');
-const mobileToggleBtn = document.getElementById('mobile-toggle-btn');
-const sidebar         = document.querySelector('.sidebar');
-let mobileOverlay     = document.querySelector('.mobile-overlay');
+const sidebar         = document.getElementById('sidebar');
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+const closeSidebarBtn  = document.getElementById('close-sidebar-btn');
 
-if (!mobileOverlay) {
-  mobileOverlay = document.createElement('div');
-  mobileOverlay.className = 'mobile-overlay';
-  document.body.appendChild(mobileOverlay);
-}
-
-if (mobileToggleBtn && sidebar) {
-  const toggleMobileSidebar = (open) => {
-    const isOpen = open !== undefined ? open : !sidebar.classList.contains('mobile-open');
-    sidebar.classList.toggle('mobile-open', isOpen);
-    mobileOverlay.classList.toggle('active', isOpen);
+// Collapsible Sidebar Toggle Logic (Desktop & Mobile)
+if (sidebar) {
+  const setSidebarCollapsed = (collapsed) => {
+    sidebar.classList.toggle('collapsed', collapsed);
+    sidebar.classList.toggle('mobile-open', !collapsed);
+    if (sidebarToggleBtn) {
+      sidebarToggleBtn.style.display = collapsed ? 'flex' : 'none';
+    }
   };
 
-  mobileToggleBtn.addEventListener('click', () => toggleMobileSidebar());
-  mobileOverlay.addEventListener('click', () => toggleMobileSidebar(false));
+  if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener('click', () => setSidebarCollapsed(false));
+  }
+  if (closeSidebarBtn) {
+    closeSidebarBtn.addEventListener('click', () => setSidebarCollapsed(true));
+  }
+
+  // Auto-collapse sidebar on smaller mobile screens (< 600px) on initial load for maximum map space
+  if (window.innerWidth < 640) {
+    setSidebarCollapsed(true);
+  }
 }
 
 const yearSelect      = document.getElementById('year-select');
@@ -314,58 +320,67 @@ if (focusCheckbox && focusCard) {
 function showError(msg) {
   errorMessage.innerText = msg;
   errorBanner.classList.add('visible');
-  setTimeout(() => errorBanner.classList.remove('visible'), 9000);
+  setTimeout(() => errorBanner.classList.remove('visible'), 7000);
 }
 
 function setMapLoading(loading) {
-  spinner.classList.toggle('visible', loading);
+  if (spinner) spinner.classList.toggle('visible', loading);
 }
 
 function updateStatus(text, type = 'info') {
-  statusText.innerText  = text;
-  statusPanel.className = `status-panel ${type}`;
+  if (statusText) statusText.innerText  = text;
+  if (statusPanel) statusPanel.className = `status-panel ${type}`;
 }
 
-// ─── Dynamic Legend ───────────────────────────────────────────
+// ─── Dynamic Horizontal Gradient Colorbar (Bottom-Right) ──────
 function renderLegend(layerType) {
   const templates = {
     ndvi: `
-      <div class="legend-title">Mật độ thực vật (NDVI)</div>
-      <div class="legend-desc">Chỉ số thể hiện mức độ bao phủ và sức khỏe của thảm thực vật.</div>
-      <div class="legend-scale">
-        <div class="gradient-bar ndvi-gradient"></div>
-        <div class="scale-labels">
-          <span>0.0 (Đất trống)</span>
-          <span>0.25</span>
-          <span>0.5+ (Phủ xanh)</span>
-        </div>
+      <div class="legend-header-line">
+        <span class="legend-bar-title">Mảng xanh (NDVI)</span>
+        <span class="legend-bar-unit">-0.1 → 0.6+</span>
+      </div>
+      <div class="legend-gradient-track ndvi-bar"></div>
+      <div class="legend-labels-row">
+        <span>0.0 Đất trống</span>
+        <span>0.25</span>
+        <span>0.5+ Cây dày</span>
       </div>`,
     lst: `
-      <div class="legend-title">Nhiệt độ bề mặt (LST — °C)</div>
-      <div class="legend-desc">Nhiệt độ bề mặt đất được hiệu chỉnh phát xạ từ cảm biến nhiệt Landsat.</div>
-      <div class="legend-scale">
-        <div class="gradient-bar lst-gradient"></div>
-        <div class="scale-labels">
-          <span>26°C (Mát mẻ)</span>
-          <span>32°C</span>
-          <span>38°C+ (Rất nóng)</span>
-        </div>
+      <div class="legend-header-line">
+        <span class="legend-bar-title">Nhiệt độ bề mặt (LST)</span>
+        <span class="legend-bar-unit">°C</span>
+      </div>
+      <div class="legend-gradient-track lst-bar"></div>
+      <div class="legend-labels-row">
+        <span>26°C Mát mẻ</span>
+        <span>32°C</span>
+        <span>38°C+ Rất nóng</span>
       </div>`,
     utfvi: `
-      <div class="legend-title">Chỉ số Đảo nhiệt (UTFVI)</div>
-      <div class="legend-desc">Đánh giá tác động sinh thái đô thị dựa trên chênh lệch nhiệt độ bề mặt.</div>
-      <div class="utfvi-grid">
-        <div class="utfvi-item"><span class="color-box" style="background:#008000"></span><span class="label"><strong>&lt; 0.000</strong>: Rất tốt</span></div>
-        <div class="utfvi-item"><span class="color-box" style="background:#90EE90"></span><span class="label"><strong>0.000–0.005</strong>: Tốt</span></div>
-        <div class="utfvi-item"><span class="color-box" style="background:#FFFF00"></span><span class="label"><strong>0.005–0.010</strong>: Trung bình</span></div>
-        <div class="utfvi-item"><span class="color-box" style="background:#FFA500"></span><span class="label"><strong>0.010–0.015</strong>: Xấu</span></div>
-        <div class="utfvi-item"><span class="color-box" style="background:#FF0000"></span><span class="label"><strong>0.015–0.020</strong>: Rất xấu</span></div>
-        <div class="utfvi-item"><span class="color-box" style="background:#800080"></span><span class="label"><strong>&gt; 0.020</strong>: Nguy kịch</span></div>
+      <div class="legend-header-line">
+        <span class="legend-bar-title">Chỉ số sinh thái (UTFVI)</span>
+        <span class="legend-bar-unit">&lt; 0.000 → &gt; 0.020</span>
+      </div>
+      <div class="utfvi-steps-bar">
+        <div class="utfvi-step" style="background:#008000" title="< 0.000: Rất tốt"></div>
+        <div class="utfvi-step" style="background:#90EE90" title="0.000–0.005: Tốt"></div>
+        <div class="utfvi-step" style="background:#FFFF00" title="0.005–0.010: Trung bình"></div>
+        <div class="utfvi-step" style="background:#FFA500" title="0.010–0.015: Xấu"></div>
+        <div class="utfvi-step" style="background:#FF0000" title="0.015–0.020: Rất xấu"></div>
+        <div class="utfvi-step" style="background:#800080" title="> 0.020: Nguy kịch"></div>
+      </div>
+      <div class="legend-labels-row">
+        <span>Tốt (&lt; 0)</span>
+        <span>Trung bình</span>
+        <span>Nguy kịch (&gt; 0.02)</span>
       </div>`
   };
 
-  legendContainer.innerHTML = templates[layerType] ?? '';
-  legendContainer.classList.toggle('visible', !!templates[layerType]);
+  if (legendContainer) {
+    legendContainer.innerHTML = templates[layerType] ?? '';
+    legendContainer.classList.toggle('visible', !!templates[layerType]);
+  }
 }
 
 // ─── Core: Load GEE Layer ─────────────────────────────────────
