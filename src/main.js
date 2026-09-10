@@ -75,8 +75,8 @@ L.control.zoom({ position: 'bottomright' }).addTo(map);
 // ─── Basemap Layers ───────────────────────────────────────────
 const basemaps = {
   '🗺️ Bản đồ đường phố (OSM)': L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { maxZoom: 19, attribution: '© OpenStreetMap contributors' }
+    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    { maxZoom: 19, attribution: '© OpenStreetMap & CARTO' }
   ),
   '🛰️ Ảnh vệ tinh (Google)': L.tileLayer(
     'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
