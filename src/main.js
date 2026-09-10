@@ -75,8 +75,8 @@ L.control.zoom({ position: 'bottomright' }).addTo(map);
 // ─── Basemap Layers ───────────────────────────────────────────
 const basemaps = {
   '🗺️ Bản đồ đường phố (OSM)': L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    { maxZoom: 19, attribution: '© OpenStreetMap & CARTO' }
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: '© OpenStreetMap, Esri' }
   ),
   '🛰️ Ảnh vệ tinh (Google)': L.tileLayer(
     'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
@@ -88,13 +88,13 @@ const basemaps = {
   )
 };
 
-// CartoDB Positron Labels layer for readability over heatmaps
+// Clean reference boundaries & places layer (no watermark, no API key required)
 const referenceLabels = L.tileLayer(
-  'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
   {
     pane: 'labelsPane',
-    maxZoom: 20,
-    attribution: '© CartoDB'
+    maxZoom: 19,
+    attribution: '© Esri'
   }
 );
 
