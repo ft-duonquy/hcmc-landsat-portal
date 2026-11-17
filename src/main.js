@@ -48,7 +48,7 @@ const I18N_DICT = {
     pointQueryErrorMsg: (msg) => `Không thể tải dữ liệu pixel: ${msg}`,
     loadingLayer: (layer, yr) => `Đang tải lớp ${layer} (${yr}) từ GEE...`,
     loadedLayer: (layer, yr) => `Lớp: ${layer} — Năm ${yr}`,
-    tileError: t('tileError'),
+    tileError: 'Lỗi khi tải một số mảnh bản đồ.',
     chartLstTitle: 'Nhiệt độ bề mặt trung bình (°C)',
     chartNdviTitle: 'Chỉ số thực vật trung bình (NDVI)',
     chartUtfviTitle: 'Mức tổn thương sinh thái (UTFVI Class)',

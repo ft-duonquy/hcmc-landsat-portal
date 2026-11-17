@@ -1,1262 +1,1370 @@
 <!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HCMC Landsat Portal — Cổng thông tin Giám sát Đảo nhiệt Đô thị TP.HCM</title>
-    <meta name="description" content="Hệ thống Web GIS nghiên cứu khoa học phân tích chỉ số thực vật NDVI, nhiệt độ bề mặt LST và chỉ số tổn thương nhiệt UTFVI trên địa bàn Thành phố Hồ Chí Minh sử dụng Google Earth Engine." />
-    <meta name="author" content="HCMC Landsat Portal Team" />
-    
-    <!-- Google Fonts: Inter and Be Vietnam Pro -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Chart.js for Regional Time-Series Analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <style>
-      /* --- Professional GIS Slate Design System (Esri / Copernicus Style) --- */
-      :root {
-        --bg-slate: #0b1329;
-        --panel-bg: rgba(15, 23, 42, 0.94);
-        --panel-border: #334155;
-        --card-bg: rgba(30, 41, 59, 0.65);
-        --card-bg-hover: rgba(51, 65, 85, 0.7);
-        --card-border: #334155;
-        --card-border-active: #38bdf8;
-        --card-active-bg: rgba(56, 189, 248, 0.12);
-        --text-primary: #f8fafc;
-        --text-secondary: #94a3b8;
-        --text-muted: #64748b;
-        --accent-color: #38bdf8;
-        --success: #10b981;
-        --error: #ef4444;
-        --warning: #f59e0b;
-        --font-sans: 'Inter', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
-        --sidebar-width: 280px;
-        --transition-fast: 0.2s ease;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HCMC Landsat Portal — Cổng thông tin Giám sát Đảo nhiệt Đô thị TP.HCM</title>
+  <meta name="description"
+    content="Hệ thống Web GIS nghiên cứu khoa học phân tích chỉ số thực vật NDVI, nhiệt độ bề mặt LST và chỉ số tổn thương nhiệt UTFVI trên địa bàn Thành phố Hồ Chí Minh sử dụng Google Earth Engine." />
+  <meta name="author" content="HCMC Landsat Portal Team" />
+
+  <!-- Google Fonts: Inter and Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Chart.js for Regional Time-Series Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* --- Professional GIS Slate Design System (Esri / Copernicus Style) --- */
+    :root {
+      --bg-slate: #0b1329;
+      --panel-bg: rgba(15, 23, 42, 0.94);
+      --panel-border: #334155;
+      --card-bg: rgba(30, 41, 59, 0.65);
+      --card-bg-hover: rgba(51, 65, 85, 0.7);
+      --card-border: #334155;
+      --card-border-active: #38bdf8;
+      --card-active-bg: rgba(56, 189, 248, 0.12);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #38bdf8;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --font-sans: 'Inter', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+      --sidebar-width: 280px;
+      --transition-fast: 0.2s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: #020617;
+      color: var(--text-primary);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    /* --- Dashboard Fullscreen Map Layout --- */
+    .dashboard {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Map takes 100% of viewport, floating tools overlay */
+    .map-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #090d16;
+      z-index: 1;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* --- Floating Toolbar / Collapsible Sidebar --- */
+    .sidebar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      bottom: 14px;
+      width: var(--sidebar-width);
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    }
+
+    .sidebar.collapsed {
+      transform: translateX(calc(-100% - 20px));
+      pointer-events: none;
+    }
+
+    /* Toggle button to expand/collapse sidebar */
+    .sidebar-toggle-btn {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      color: var(--text-primary);
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: var(--transition-fast);
+    }
+
+    .sidebar-toggle-btn:hover {
+      background: #1e293b;
+      border-color: #475569;
+      color: #38bdf8;
+    }
+
+    .sidebar-toggle-btn svg {
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .brand-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+    }
+
+    .brand-subtitle {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      line-height: 1.35;
+      margin-top: 3px;
+    }
+
+    .close-sidebar-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .close-sidebar-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    .sidebar-content {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .sidebar-content::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sidebar-content::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    /* Compact status bar */
+    .status-panel {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.72rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+    }
+
+    .status-panel.success {
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #34d399;
+    }
+
+    .status-panel.loading {
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #fbbf24;
+    }
+
+    .status-panel.error {
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #f87171;
+    }
+
+    .status-indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-panel.success .status-indicator {
+      background: #10b981;
+    }
+
+    .status-panel.loading .status-indicator {
+      background: #f59e0b;
+      animation: pulse 1.2s infinite;
+    }
+
+    .status-panel.error .status-indicator {
+      background: #ef4444;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    /* Compact year select */
+    .year-select-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .year-select-icon {
+      position: absolute;
+      left: 9px;
+      pointer-events: none;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+    }
+
+    #year-select {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 6px 24px 6px 28px;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: var(--transition-fast);
+    }
+
+    #year-select:hover,
+    #year-select:focus {
+      border-color: #475569;
+      background: var(--card-bg-hover);
+    }
+
+    .year-select-wrapper::after {
+      content: '';
+      position: absolute;
+      right: 10px;
+      pointer-events: none;
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid var(--text-secondary);
+      border-bottom: 1.5px solid var(--text-secondary);
+      transform: rotate(45deg) translateY(-2px);
+    }
+
+    /* Compact Mode Toggle (Focus Mode) */
+    .mode-toggle-row {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .mode-toggle-row:hover {
+      border-color: #475569;
+    }
+
+    .mode-toggle-row.active {
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .mode-title {
+      font-size: 0.77rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 32px;
+      height: 17px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      background-color: #475569;
+      transition: .2s;
+      border-radius: 17px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 11px;
+      width: 11px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: #38bdf8;
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(15px);
+    }
+
+    /* Compact Layer Cards */
+    .layer-cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: var(--transition-fast);
+    }
+
+    .control-card:hover {
+      background: var(--card-bg-hover);
+      border-color: #475569;
+    }
+
+    .control-card.active {
+      background: var(--card-active-bg);
+      border-color: var(--card-border-active);
+    }
+
+    .control-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .control-card.active .control-icon {
+      background: #0284c7;
+      border-color: #38bdf8;
+    }
+
+    .control-card.active .control-icon svg {
+      stroke: #ffffff;
+    }
+
+    .control-name {
+      font-size: 0.79rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .sidebar-footer {
+      padding: 8px 14px;
+      border-top: 1px solid var(--panel-border);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* --- Floating Horizontal Gradient Colorbar (Bottom-Right) --- */
+    .floating-legend-bar {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 8px 12px 9px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      min-width: 220px;
+      max-width: 320px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      transition: opacity 0.2s ease;
+    }
+
+    .floating-legend-bar.visible {
+      display: flex;
+    }
+
+    .legend-header-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .legend-bar-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .legend-bar-unit {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .legend-gradient-track {
+      height: 8px;
+      border-radius: 4px;
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .ndvi-bar {
+      background: linear-gradient(to right, #ffffff 0%, #e5f5e0 25%, #a1d99b 50%, #31a354 75%, #006d2c 100%);
+    }
+
+    .lst-bar {
+      background: linear-gradient(to right, #2c7bb6 0%, #abd9e9 25%, #ffffbf 50%, #fdae61 75%, #d7191c 100%);
+    }
+
+    .utfvi-steps-bar {
+      display: flex;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .utfvi-step {
+      flex: 1;
+      height: 100%;
+    }
+
+    .legend-labels-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    /* --- Professional Skeleton Loading Overlay --- */
+    .map-skeleton-overlay {
+      position: absolute;
+      top: 16px;
+      right: 68px;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .map-skeleton-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .skeleton-shimmer-box {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #334155 0%, #64748b 50%, #334155 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      flex-shrink: 0;
+    }
+
+    .skeleton-text {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0;
       }
 
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+      100% {
+        background-position: -200% 0;
+      }
+    }
+
+    /* --- Error Notification Banner --- */
+    .error-banner {
+      position: absolute;
+      top: 16px;
+      right: 68px;
+      background-color: rgba(220, 38, 38, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 8px 14px;
+      max-width: 360px;
+      color: white;
+      z-index: 1002;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+      display: flex;
+      gap: 8px;
+      transform: translateY(-80px);
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .error-banner.visible {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .error-title {
+      font-weight: 600;
+      font-size: 0.78rem;
+    }
+
+    .error-desc {
+      font-size: 0.7rem;
+      opacity: 0.92;
+      line-height: 1.3;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
       }
 
-      body {
-        font-family: var(--font-sans);
-        background-color: #020617;
-        color: var(--text-primary);
-        height: 100vh;
-        width: 100vw;
-        overflow: hidden;
-        margin: 0;
+      50% {
+        opacity: 0.4;
       }
+    }
 
-      /* --- Dashboard Fullscreen Map Layout --- */
-      .dashboard {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
-      }
+    /* Leaflet GIS Slate Styling Overrides */
+    .leaflet-container {
+      font-family: var(--font-sans) !important;
+    }
 
-      /* Map takes 100% of viewport, floating tools overlay */
-      .map-container {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #090d16;
-        z-index: 1;
-      }
+    .leaflet-control-layers {
+      background: var(--panel-bg) !important;
+      border: 1px solid var(--panel-border) !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: var(--text-primary) !important;
+      font-family: var(--font-sans) !important;
+      font-size: 0.76rem !important;
+      overflow: hidden;
+    }
 
-      #map {
-        width: 100%;
-        height: 100%;
-      }
+    .leaflet-control-layers-toggle {
+      background-color: var(--panel-bg) !important;
+      border: 1px solid var(--panel-border) !important;
+      border-radius: 6px !important;
+      width: 32px !important;
+      height: 32px !important;
+    }
 
-      /* --- Floating Toolbar / Collapsible Sidebar --- */
+    .leaflet-control-layers-expanded {
+      padding: 8px 12px !important;
+    }
+
+    .leaflet-control-layers label {
+      color: var(--text-primary) !important;
+      padding: 3px 0 !important;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .leaflet-control-layers label:hover {
+      color: var(--accent-color) !important;
+    }
+
+    .leaflet-control-layers-separator {
+      border-top: 1px solid var(--panel-border) !important;
+      margin: 4px 0 !important;
+    }
+
+    .leaflet-control-zoom {
+      border: none !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+      border-radius: 6px !important;
+      overflow: hidden;
+    }
+
+    .leaflet-control-zoom a {
+      background: var(--panel-bg) !important;
+      border: 1px solid var(--panel-border) !important;
+      color: var(--text-primary) !important;
+      border-radius: 0 !important;
+      width: 30px !important;
+      height: 30px !important;
+      line-height: 28px !important;
+    }
+
+    .leaflet-control-zoom a:hover {
+      background: #334155 !important;
+      color: #fff !important;
+    }
+
+    /* --- Spatial Value Inspector Popup Styling --- */
+    .gis-inspector-popup .leaflet-popup-content-wrapper {
+      background: rgba(15, 23, 42, 0.96) !important;
+      border: 1px solid #334155 !important;
+      border-radius: 8px !important;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6) !important;
+      padding: 4px !important;
+      color: #f8fafc !important;
+      backdrop-filter: blur(12px) !important;
+    }
+
+    .gis-inspector-popup .leaflet-popup-tip {
+      background: #0f172a !important;
+      border: 1px solid #334155 !important;
+    }
+
+    .inspector-card {
+      padding: 8px 10px;
+      min-width: 210px;
+      font-family: var(--font-sans);
+    }
+
+    .inspector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+
+    .inspector-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .inspector-coord {
+      font-size: 0.68rem;
+      color: #94a3b8;
+    }
+
+    .inspector-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .inspector-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.74rem;
+    }
+
+    .inspector-label {
+      color: #94a3b8;
+    }
+
+    .inspector-val {
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .inspector-badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+
+    /* --- Advanced Tools Section in Sidebar --- */
+    .tool-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #f8fafc;
+      font-size: 0.76rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 6px;
+      text-align: left;
+    }
+
+    .tool-btn:hover {
+      background: #1e293b;
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    .tool-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    .tool-btn svg {
+      flex-shrink: 0;
+    }
+
+    /* --- Split-Screen Compare Mode Overlay Container --- */
+    .compare-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1050;
+      display: none;
+      background: #0b1329;
+    }
+
+    .compare-overlay.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .compare-topbar {
+      height: 48px;
+      background: rgba(15, 23, 42, 0.96);
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+
+    .compare-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    .compare-ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .compare-select {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.76rem;
+      cursor: pointer;
+    }
+
+    .compare-btn-close {
+      background: #ef4444;
+      border: none;
+      color: white;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .compare-btn-close:hover {
+      opacity: 0.85;
+    }
+
+    .compare-maps-wrapper {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .compare-pane {
+      flex: 1;
+      position: relative;
+      height: 100%;
+    }
+
+    .compare-pane-divider {
+      width: 3px;
+      background: #38bdf8;
+      z-index: 20;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+      position: relative;
+    }
+
+    .compare-label-tag {
+      position: absolute;
+      top: 12px;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid #334155;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #38bdf8;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+    }
+
+    .compare-label-left {
+      left: 16px;
+    }
+
+    .compare-label-right {
+      right: 16px;
+    }
+
+    /* --- District Time-Series Modal --- */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 760px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+    }
+
+    .modal-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    .modal-close-btn:hover {
+      color: #fff;
+    }
+
+    .modal-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+    }
+
+    .modal-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .chart-container-box {
+      position: relative;
+      height: 320px;
+      width: 100%;
+    }
+
+    .chart-tab-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 0.74rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .chart-tab-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    .lang-switch-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .lang-switch-btn:hover {
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    .lang-badge {
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    /* Mobile Drawer Optimization */
+    @media (max-width: 768px) {
       .sidebar {
-        position: absolute;
-        top: 14px;
-        left: 14px;
-        bottom: 14px;
-        width: var(--sidebar-width);
-        background: var(--panel-bg);
-        border: 1px solid var(--panel-border);
-        border-radius: 8px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        display: flex;
-        flex-direction: column;
-        z-index: 1000;
-        transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 82%;
+        max-width: 300px;
+        border-radius: 0;
+        border-left: none;
+        border-top: none;
+        border-bottom: none;
       }
 
-      .sidebar.collapsed {
-        transform: translateX(calc(-100% - 20px));
-        pointer-events: none;
-      }
-
-      /* Toggle button to expand/collapse sidebar */
-      .sidebar-toggle-btn {
-        position: absolute;
-        top: 14px;
-        left: 14px;
-        z-index: 999;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--panel-bg);
-        border: 1px solid var(--panel-border);
-        color: var(--text-primary);
-        padding: 7px 12px;
-        border-radius: 6px;
-        font-size: 0.78rem;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        transition: var(--transition-fast);
-      }
-
-      .sidebar-toggle-btn:hover {
-        background: #1e293b;
-        border-color: #475569;
-        color: #38bdf8;
-      }
-
-      .sidebar-toggle-btn svg {
-        flex-shrink: 0;
-      }
-
-      .sidebar-header {
-        padding: 12px 14px 10px;
-        border-bottom: 1px solid var(--panel-border);
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 8px;
-      }
-
-      .brand-title {
-        font-size: 0.98rem;
-        font-weight: 700;
-        color: #f8fafc;
-        letter-spacing: -0.01em;
-        line-height: 1.25;
-      }
-
-      .brand-subtitle {
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        font-weight: 400;
-        line-height: 1.35;
-        margin-top: 3px;
-      }
-
-      .close-sidebar-btn {
-        background: transparent;
-        border: none;
-        color: var(--text-secondary);
-        cursor: pointer;
-        padding: 3px;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: var(--transition-fast);
-        flex-shrink: 0;
-      }
-
-      .close-sidebar-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: var(--text-primary);
-      }
-
-      .sidebar-content {
-        padding: 12px 14px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        overflow-y: auto;
-        flex: 1;
-      }
-
-      .sidebar-content::-webkit-scrollbar {
-        width: 4px;
-      }
-      .sidebar-content::-webkit-scrollbar-thumb {
-        background: #334155;
-        border-radius: 4px;
-      }
-
-      /* Compact status bar */
-      .status-panel {
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid var(--card-border);
-        border-radius: 6px;
-        padding: 6px 10px;
-        font-size: 0.72rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--text-secondary);
-      }
-
-      .status-panel.success {
-        border-color: rgba(16, 185, 129, 0.35);
-        color: #34d399;
-      }
-
-      .status-panel.loading {
-        border-color: rgba(245, 158, 11, 0.35);
-        color: #fbbf24;
-      }
-
-      .status-panel.error {
-        border-color: rgba(239, 68, 68, 0.35);
-        color: #f87171;
-      }
-
-      .status-indicator {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        flex-shrink: 0;
-      }
-
-      .status-panel.success .status-indicator { background: #10b981; }
-      .status-panel.loading .status-indicator { background: #f59e0b; animation: pulse 1.2s infinite; }
-      .status-panel.error .status-indicator { background: #ef4444; }
-
-      .section-label {
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-muted);
-        margin-bottom: 5px;
-      }
-
-      /* Compact year select */
-      .year-select-wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-      }
-
-      .year-select-icon {
-        position: absolute;
-        left: 9px;
-        pointer-events: none;
-        color: var(--text-secondary);
-        display: flex;
-        align-items: center;
-      }
-
-      #year-select {
-        width: 100%;
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 6px;
-        color: var(--text-primary);
-        font-size: 0.8rem;
-        font-weight: 600;
-        padding: 6px 24px 6px 28px;
-        cursor: pointer;
-        outline: none;
-        appearance: none;
-        -webkit-appearance: none;
-        transition: var(--transition-fast);
-      }
-
-      #year-select:hover,
-      #year-select:focus {
-        border-color: #475569;
-        background: var(--card-bg-hover);
-      }
-
-      .year-select-wrapper::after {
-        content: '';
-        position: absolute;
-        right: 10px;
-        pointer-events: none;
-        width: 6px;
-        height: 6px;
-        border-right: 1.5px solid var(--text-secondary);
-        border-bottom: 1.5px solid var(--text-secondary);
-        transform: rotate(45deg) translateY(-2px);
-      }
-
-      /* Compact Mode Toggle (Focus Mode) */
-      .mode-toggle-row {
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 6px;
-        padding: 7px 10px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        cursor: pointer;
-        transition: var(--transition-fast);
-      }
-
-      .mode-toggle-row:hover {
-        border-color: #475569;
-      }
-
-      .mode-toggle-row.active {
-        border-color: rgba(56, 189, 248, 0.4);
-        background: rgba(56, 189, 248, 0.08);
-      }
-
-      .mode-title {
-        font-size: 0.77rem;
-        font-weight: 600;
-        color: var(--text-primary);
-      }
-
-      .switch {
-        position: relative;
-        display: inline-block;
-        width: 32px;
-        height: 17px;
-        flex-shrink: 0;
-      }
-      .switch input { opacity: 0; width: 0; height: 0; }
-      .slider {
-        position: absolute;
-        inset: 0;
-        cursor: pointer;
-        background-color: #475569;
-        transition: .2s;
-        border-radius: 17px;
-      }
-      .slider:before {
-        position: absolute;
-        content: "";
-        height: 11px;
-        width: 11px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        transition: .2s;
-        border-radius: 50%;
-      }
-      input:checked + .slider { background-color: #38bdf8; }
-      input:checked + .slider:before { transform: translateX(15px); }
-
-      /* Compact Layer Cards */
-      .layer-cards-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .control-card {
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 6px;
-        padding: 8px 10px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        transition: var(--transition-fast);
-      }
-
-      .control-card:hover {
-        background: var(--card-bg-hover);
-        border-color: #475569;
-      }
-
-      .control-card.active {
-        background: var(--card-active-bg);
-        border-color: var(--card-border-active);
-      }
-
-      .control-icon {
-        width: 28px;
-        height: 28px;
-        border-radius: 5px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-
-      .control-card.active .control-icon {
-        background: #0284c7;
-        border-color: #38bdf8;
-      }
-
-      .control-card.active .control-icon svg {
-        stroke: #ffffff;
-      }
-
-      .control-name {
-        font-size: 0.79rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        line-height: 1.2;
-      }
-
-      .sidebar-footer {
-        padding: 8px 14px;
-        border-top: 1px solid var(--panel-border);
-        font-size: 0.65rem;
-        color: var(--text-muted);
-        text-align: center;
-      }
-
-      /* --- Floating Horizontal Gradient Colorbar (Bottom-Right) --- */
       .floating-legend-bar {
-        position: absolute;
-        bottom: 24px;
-        right: 24px;
-        z-index: 999;
-        background: rgba(15, 23, 42, 0.92);
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        padding: 8px 12px 9px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        min-width: 220px;
-        max-width: 320px;
-        display: none;
-        flex-direction: column;
-        gap: 4px;
-        transition: opacity 0.2s ease;
+        bottom: 16px;
+        right: 12px;
+        left: 12px;
+        max-width: calc(100vw - 24px);
+        min-width: auto;
       }
 
-      .floating-legend-bar.visible {
-        display: flex;
-      }
-
-      .legend-header-line {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-      }
-
-      .legend-bar-title {
-        font-size: 0.72rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
-      }
-
-      .legend-bar-unit {
-        font-size: 0.65rem;
-        color: var(--text-muted);
-      }
-
-      .legend-gradient-track {
-        height: 8px;
-        border-radius: 4px;
-        width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-      }
-
-      .ndvi-bar {
-        background: linear-gradient(to right, #ffffff 0%, #e5f5e0 25%, #a1d99b 50%, #31a354 75%, #006d2c 100%);
-      }
-
-      .lst-bar {
-        background: linear-gradient(to right, #2c7bb6 0%, #abd9e9 25%, #ffffbf 50%, #fdae61 75%, #d7191c 100%);
-      }
-
-      .utfvi-steps-bar {
-        display: flex;
-        height: 8px;
-        border-radius: 4px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-      }
-
-      .utfvi-step {
-        flex: 1;
-        height: 100%;
-      }
-
-      .legend-labels-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.65rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-        margin-top: 1px;
-      }
-
-      /* --- Professional Skeleton Loading Overlay --- */
-      .map-skeleton-overlay {
-        position: absolute;
-        top: 16px;
-        right: 68px;
-        z-index: 1000;
-        background: rgba(15, 23, 42, 0.9);
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        padding: 6px 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-      }
-
-      .map-skeleton-overlay.visible {
-        opacity: 1;
-        pointer-events: auto;
-      }
-
-      .skeleton-shimmer-box {
-        width: 14px;
-        height: 14px;
-        border-radius: 3px;
-        background: linear-gradient(90deg, #334155 0%, #64748b 50%, #334155 100%);
-        background-size: 200% 100%;
-        animation: shimmer 1.4s infinite;
-        flex-shrink: 0;
-      }
-
-      .skeleton-text {
-        font-size: 0.72rem;
-        font-weight: 500;
-        color: #cbd5e1;
-        white-space: nowrap;
-      }
-
-      @keyframes shimmer {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-      }
-
-      /* --- Error Notification Banner --- */
       .error-banner {
-        position: absolute;
-        top: 16px;
-        right: 68px;
-        background-color: rgba(220, 38, 38, 0.92);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
-        padding: 8px 14px;
-        max-width: 360px;
-        color: white;
-        z-index: 1002;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(8px);
-        display: flex;
-        gap: 8px;
-        transform: translateY(-80px);
-        opacity: 0;
-        transition: transform 0.3s ease, opacity 0.3s ease;
-        pointer-events: none;
+        top: 60px;
+        right: 12px;
+        left: 12px;
+        max-width: calc(100vw - 24px);
       }
 
-      .error-banner.visible {
-        transform: translateY(0);
-        opacity: 1;
-        pointer-events: auto;
+      .map-skeleton-overlay {
+        top: 60px;
+        right: 12px;
       }
 
-      .error-title {
-        font-weight: 600;
-        font-size: 0.78rem;
-      }
-
-      .error-desc {
-        font-size: 0.7rem;
-        opacity: 0.92;
-        line-height: 1.3;
-      }
-
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
-      }
-
-      /* Leaflet GIS Slate Styling Overrides */
-      .leaflet-container {
-        font-family: var(--font-sans) !important;
-      }
-
-      .leaflet-control-layers {
-        background: var(--panel-bg) !important;
-        border: 1px solid var(--panel-border) !important;
-        border-radius: 6px !important;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.4) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: var(--text-primary) !important;
-        font-family: var(--font-sans) !important;
-        font-size: 0.76rem !important;
-        overflow: hidden;
-      }
-      .leaflet-control-layers-toggle {
-        background-color: var(--panel-bg) !important;
-        border: 1px solid var(--panel-border) !important;
-        border-radius: 6px !important;
-        width: 32px !important;
-        height: 32px !important;
-      }
-      .leaflet-control-layers-expanded {
-        padding: 8px 12px !important;
-      }
-      .leaflet-control-layers label {
-        color: var(--text-primary) !important;
-        padding: 3px 0 !important;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer;
-      }
-      .leaflet-control-layers label:hover { color: var(--accent-color) !important; }
-      .leaflet-control-layers-separator {
-        border-top: 1px solid var(--panel-border) !important;
-        margin: 4px 0 !important;
-      }
-      .leaflet-control-zoom {
-        border: none !important;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.4) !important;
-        border-radius: 6px !important;
-        overflow: hidden;
-      }
-      .leaflet-control-zoom a {
-        background: var(--panel-bg) !important;
-        border: 1px solid var(--panel-border) !important;
-        color: var(--text-primary) !important;
-        border-radius: 0 !important;
-        width: 30px !important;
-        height: 30px !important;
-        line-height: 28px !important;
-      }
-      .leaflet-control-zoom a:hover {
-        background: #334155 !important;
-        color: #fff !important;
-      }
-
-      /* --- Spatial Value Inspector Popup Styling --- */
-      .gis-inspector-popup .leaflet-popup-content-wrapper {
-        background: rgba(15, 23, 42, 0.96) !important;
-        border: 1px solid #334155 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6) !important;
-        padding: 4px !important;
-        color: #f8fafc !important;
-        backdrop-filter: blur(12px) !important;
-      }
-      .gis-inspector-popup .leaflet-popup-tip {
-        background: #0f172a !important;
-        border: 1px solid #334155 !important;
-      }
-      .inspector-card {
-        padding: 8px 10px;
-        min-width: 210px;
-        font-family: var(--font-sans);
-      }
-      .inspector-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #334155;
-        padding-bottom: 6px;
-        margin-bottom: 8px;
-      }
-      .inspector-title {
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #38bdf8;
-      }
-      .inspector-coord {
-        font-size: 0.68rem;
-        color: #94a3b8;
-      }
-      .inspector-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .inspector-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.74rem;
-      }
-      .inspector-label {
-        color: #94a3b8;
-      }
-      .inspector-val {
-        font-weight: 700;
-        color: #f8fafc;
-      }
-      .inspector-badge {
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 0.68rem;
-        font-weight: 700;
-      }
-
-      /* --- Advanced Tools Section in Sidebar --- */
-      .tool-btn {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        background: rgba(30, 41, 59, 0.65);
-        border: 1px solid #334155;
-        border-radius: 6px;
-        color: #f8fafc;
-        font-size: 0.76rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin-bottom: 6px;
-        text-align: left;
-      }
-      .tool-btn:hover {
-        background: #1e293b;
-        border-color: #38bdf8;
-        color: #38bdf8;
-      }
-      .tool-btn.active {
-        background: rgba(56, 189, 248, 0.15);
-        border-color: #38bdf8;
-        color: #38bdf8;
-      }
-      .tool-btn svg {
-        flex-shrink: 0;
-      }
-
-      /* --- Split-Screen Compare Mode Overlay Container --- */
-      .compare-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1050;
-        display: none;
-        background: #0b1329;
-      }
-      .compare-overlay.active {
-        display: flex;
-        flex-direction: column;
-      }
       .compare-topbar {
-        height: 48px;
-        background: rgba(15, 23, 42, 0.96);
-        border-bottom: 1px solid #334155;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 16px;
-        z-index: 10;
-        backdrop-filter: blur(10px);
-      }
-      .compare-title-wrap {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #f8fafc;
-      }
-      .compare-ctrl-group {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .compare-select {
-        background: #1e293b;
-        border: 1px solid #334155;
-        color: #f8fafc;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.76rem;
-        cursor: pointer;
-      }
-      .compare-btn-close {
-        background: #ef4444;
-        border: none;
-        color: white;
-        padding: 5px 12px;
-        border-radius: 4px;
-        font-size: 0.74rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: opacity 0.2s;
-      }
-      .compare-btn-close:hover {
-        opacity: 0.85;
-      }
-      .compare-maps-wrapper {
-        flex: 1;
-        display: flex;
-        position: relative;
-        overflow: hidden;
-      }
-      .compare-pane {
-        flex: 1;
-        position: relative;
-        height: 100%;
-      }
-      .compare-pane-divider {
-        width: 3px;
-        background: #38bdf8;
-        z-index: 20;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
-        position: relative;
-      }
-      .compare-label-tag {
-        position: absolute;
-        top: 12px;
-        z-index: 1000;
-        background: rgba(15, 23, 42, 0.88);
-        border: 1px solid #334155;
-        padding: 4px 10px;
-        border-radius: 4px;
+        padding: 0 8px;
         font-size: 0.75rem;
-        font-weight: 600;
-        color: #38bdf8;
-        pointer-events: none;
-        backdrop-filter: blur(6px);
-      }
-      .compare-label-left { left: 16px; }
-      .compare-label-right { right: 16px; }
-
-      /* --- District Time-Series Modal --- */
-      .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.75);
-        z-index: 2000;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(4px);
-      }
-      .modal-backdrop.active {
-        display: flex;
-      }
-      .modal-dialog {
-        background: #0f172a;
-        border: 1px solid #334155;
-        border-radius: 10px;
-        width: 90%;
-        max-width: 760px;
-        max-height: 90vh;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
-        overflow: hidden;
-      }
-      .modal-header {
-        padding: 14px 20px;
-        border-bottom: 1px solid #334155;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #1e293b;
-      }
-      .modal-title {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: #f8fafc;
-      }
-      .modal-close-btn {
-        background: transparent;
-        border: none;
-        color: #94a3b8;
-        cursor: pointer;
-        padding: 4px;
-        display: flex;
-        align-items: center;
-      }
-      .modal-close-btn:hover { color: #fff; }
-      .modal-body {
-        padding: 18px 20px;
-        overflow-y: auto;
-      }
-      .modal-controls {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 14px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      .chart-container-box {
-        position: relative;
-        height: 320px;
-        width: 100%;
-      }
-      .chart-tab-btn {
-        background: #1e293b;
-        border: 1px solid #334155;
-        color: #94a3b8;
-        padding: 5px 12px;
-        border-radius: 4px;
-        font-size: 0.74rem;
-        cursor: pointer;
-        font-weight: 500;
-        transition: all 0.15s ease;
-      }
-      .chart-tab-btn.active {
-        background: rgba(56, 189, 248, 0.18);
-        border-color: #38bdf8;
-        color: #38bdf8;
       }
 
-      .lang-switch-btn {
-        background: #1e293b;
-        border: 1px solid #334155;
-        color: #94a3b8;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        transition: all 0.2s ease;
+      .compare-ctrl-group {
+        gap: 6px;
       }
-      .lang-switch-btn:hover {
-        border-color: #38bdf8;
-        color: #38bdf8;
-      }
-      .lang-badge {
-        font-weight: 700;
-        color: #38bdf8;
-      }
+    }
+  </style>
+</head>
 
-      /* Mobile Drawer Optimization */
-      @media (max-width: 768px) {
-        .sidebar {
-          top: 0;
-          left: 0;
-          bottom: 0;
-          width: 82%;
-          max-width: 300px;
-          border-radius: 0;
-          border-left: none;
-          border-top: none;
-          border-bottom: none;
-        }
+<body>
+  <div class="dashboard">
+    <!-- Floating Sidebar Toggle Button (Visible when collapsed) -->
+    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Mở/Thu gọn Bảng điều khiển">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+        <line x1="9" y1="3" x2="9" y2="21" />
+      </svg>
+      <span data-i18n="controlPanel">Bảng điều khiển</span>
+    </button>
 
-        .floating-legend-bar {
-          bottom: 16px;
-          right: 12px;
-          left: 12px;
-          max-width: calc(100vw - 24px);
-          min-width: auto;
-        }
-
-        .error-banner {
-          top: 60px;
-          right: 12px;
-          left: 12px;
-          max-width: calc(100vw - 24px);
-        }
-
-        .map-skeleton-overlay {
-          top: 60px;
-          right: 12px;
-        }
-
-        .compare-topbar {
-          padding: 0 8px;
-          font-size: 0.75rem;
-        }
-        .compare-ctrl-group {
-          gap: 6px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="dashboard">
-      <!-- Floating Sidebar Toggle Button (Visible when collapsed) -->
-      <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Mở/Thu gọn Bảng điều khiển">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-          <line x1="9" y1="3" x2="9" y2="21"/>
-        </svg>
-        <span data-i18n="controlPanel">Bảng điều khiển</span>
-      </button>
-
-      <!-- Floating Toolbar / Collapsible Sidebar (280px, Slate Dark) -->
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-          <div>
-            <h1 class="brand-title">HCMC Landsat Portal</h1>
-            <div class="brand-subtitle" data-i18n="brandSubtitle">Giám sát Đảo nhiệt Đô thị TP.HCM</div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <button class="lang-switch-btn" id="lang-toggle-btn" title="Chuyển đổi ngôn ngữ / Switch language" aria-label="Language switch">
-              <span class="lang-badge" id="lang-current-label">VI</span>
-              <span style="font-size: 0.65rem; color: #64748b;">| EN</span>
-            </button>
-            <button class="close-sidebar-btn" id="close-sidebar-btn" title="Thu gọn thanh điều khiển" aria-label="Đóng">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
+    <!-- Floating Toolbar / Collapsible Sidebar (280px, Slate Dark) -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div>
+          <h1 class="brand-title">HCMC Landsat Portal</h1>
+          <div class="brand-subtitle" data-i18n="brandSubtitle">Giám sát Đảo nhiệt Đô thị TP.HCM</div>
         </div>
-
-        <div class="sidebar-content">
-          <!-- Status Indicator Panel -->
-          <div class="status-panel success" id="status-panel">
-            <span class="status-indicator"></span>
-            <span id="status-text" data-i18n="connecting">Đang kết nối hệ thống...</span>
-          </div>
-
-          <!-- Dynamic Year Selector -->
-          <div class="year-group">
-            <div class="section-label" data-i18n="analysisYear">Năm phân tích</div>
-            <div class="year-select-wrapper">
-              <span class="year-select-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-              </span>
-              <select id="year-select" aria-label="Chọn năm phân tích">
-                <option value="2025" selected id="opt-year-2025">2025 (Mặc định)</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2022">2022</option>
-                <option value="2021">2021</option>
-                <option value="2020">2020</option>
-                <option value="2019">2019</option>
-                <option value="2018">2018</option>
-              </select>
-            </div>
-          </div>
-          
-          <!-- Focus Mode Toggle -->
-          <div class="mode-group">
-            <div class="section-label" data-i18n="displayMode">Hiển thị</div>
-            <div class="mode-toggle-row" id="btn-focus-mode">
-              <span class="mode-title" data-i18n="focusMode">Tập trung chỉ số (Focus)</span>
-              <label class="switch">
-                <input type="checkbox" id="focus-mode-checkbox">
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-          
-          <!-- Interactive Layers Menu -->
-          <div class="layers-group">
-            <div class="section-label" data-i18n="layersSection">Lớp bản đồ phân tích</div>
-            <div class="layer-cards-list">
-              <!-- Card NDVI -->
-              <div class="control-card active" id="btn-ndvi">
-                <div class="control-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m12 2-8 10h5l-4 8h14l-4-8h5z"/>
-                    <path d="M12 20v2"/>
-                  </svg>
-                </div>
-                <span class="control-name" data-i18n="layerNdvi">Mảng xanh (NDVI)</span>
-              </div>
-
-              <!-- Card LST -->
-              <div class="control-card" id="btn-lst">
-                <div class="control-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
-                  </svg>
-                </div>
-                <span class="control-name" data-i18n="layerLst">Nhiệt độ bề mặt (LST)</span>
-              </div>
-
-              <!-- Card UTFVI -->
-              <div class="control-card" id="btn-utfvi">
-                <div class="control-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                </div>
-                <span class="control-name" data-i18n="layerUtfvi">Tổn thương sinh thái (UTFVI)</span>
-              </div>
-          <!-- Advanced Analytics Tools -->
-          <div class="layers-group">
-            <div class="section-label" data-i18n="advancedTools">Công cụ phân tích nâng cao</div>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <button class="tool-btn" id="btn-open-compare" title="So sánh song song 2 mốc thời gian">
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                  <line x1="12" y1="3" x2="12" y2="21"/>
-                </svg>
-                <span data-i18n="compareTool">So sánh 2 năm (Split-Screen)</span>
-              </button>
-
-              <button class="tool-btn" id="btn-open-district-chart" title="Xem biểu đồ biến thiên 2018 - 2025">
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10"/>
-                  <line x1="12" y1="20" x2="12" y2="4"/>
-                  <line x1="6" y1="20" x2="6" y2="14"/>
-                </svg>
-                <span data-i18n="districtChartTool">Biểu đồ chuỗi thời gian Quận/Huyện</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <footer class="sidebar-footer">
-          © 2026–2027 LQD_Nhóm 48. All rights reserved.
-        </footer>
-      </aside>
-
-      <!-- Map Viewer Section (Occupies 85-90%+ of Viewport) -->
-      <main class="map-container">
-        <!-- Leaflet Map Container -->
-        <div id="map"></div>
-
-        <!-- Skeleton Loading Toast (Replaces obstructive black spinner) -->
-        <div class="map-skeleton-overlay" id="map-spinner">
-          <div class="skeleton-shimmer-box"></div>
-          <span class="skeleton-text" data-i18n="renderingTiles">Đang kết xuất tile GEE...</span>
-        </div>
-
-        <!-- Compact Horizontal Floating Gradient Colorbar (Bottom-Right) -->
-        <div class="floating-legend-bar" id="dynamic-legend">
-          <!-- Populated dynamically via JS -->
-        </div>
-
-        <!-- Error Notification Banner -->
-        <div class="error-banner" id="error-banner">
-          <div class="error-content">
-            <div class="error-title" data-i18n="geeErrorTitle">Lỗi kết nối GEE</div>
-            <div class="error-desc" id="error-message" data-i18n="geeErrorDesc">Mất kết nối với Google Earth Engine.</div>
-          </div>
-        </div>
-      </main>
-
-      <!-- Split-Screen Compare Mode Overlay -->
-      <div class="compare-overlay" id="compare-overlay">
-        <div class="compare-topbar">
-          <div class="compare-title-wrap">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <line x1="12" y1="3" x2="12" y2="21"/>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button class="lang-switch-btn" id="lang-toggle-btn" title="Chuyển đổi ngôn ngữ / Switch language"
+            aria-label="Language switch">
+            <span class="lang-badge" id="lang-current-label">VI</span>
+            <span style="font-size: 0.65rem; color: #64748b;">| EN</span>
+          </button>
+          <button class="close-sidebar-btn" id="close-sidebar-btn" title="Thu gọn thanh điều khiển" aria-label="Đóng">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
-            <span data-i18n="compareTitle">So sánh song song 2 mốc thời gian (Đồng bộ thời gian thực 60fps)</span>
-          </div>
-          <div class="compare-ctrl-group">
-            <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
-              <span data-i18n="compareLeft">Trái:</span>
-              <select id="compare-year-left" class="compare-select">
-                <option value="2018" selected>2018</option>
-                <option value="2019">2019</option>
-                <option value="2020">2020</option>
-                <option value="2021">2021</option>
-                <option value="2022">2022</option>
-                <option value="2023">2023</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-              </select>
-            </label>
-            <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
-              <span data-i18n="compareRight">Phải:</span>
-              <select id="compare-year-right" class="compare-select">
-                <option value="2018">2018</option>
-                <option value="2019">2019</option>
-                <option value="2020">2020</option>
-                <option value="2021">2021</option>
-                <option value="2022">2022</option>
-                <option value="2023">2023</option>
-                <option value="2024">2024</option>
-                <option value="2025" selected>2025</option>
-              </select>
-            </label>
-            <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
-              <span data-i18n="compareLayer">Lớp:</span>
-              <select id="compare-layer-select" class="compare-select">
-                <option value="lst" selected id="opt-layer-lst">Nhiệt độ (LST)</option>
-                <option value="ndvi" id="opt-layer-ndvi">Mảng xanh (NDVI)</option>
-                <option value="utfvi" id="opt-layer-utfvi">Tổn thương (UTFVI)</option>
-              </select>
-            </label>
-            <button class="compare-btn-close" id="btn-close-compare" data-i18n="closeCompare">✕ Đóng so sánh</button>
-          </div>
-        </div>
-        <div class="compare-maps-wrapper">
-          <div class="compare-pane" id="compare-map-left">
-            <div class="compare-label-tag compare-label-left" id="label-map-left">2018 - LST</div>
-          </div>
-          <div class="compare-pane-divider"></div>
-          <div class="compare-pane" id="compare-map-right">
-            <div class="compare-label-tag compare-label-right" id="label-map-right">2025 - LST</div>
-          </div>
+          </button>
         </div>
       </div>
 
-      <!-- District Regional Time-Series Modal -->
-      <div class="modal-backdrop" id="district-modal">
-        <div class="modal-dialog">
-          <div class="modal-header">
-            <div class="modal-title" data-i18n="districtModalTitle">Biểu đồ xu hướng biến thiên Đảo nhiệt (2018 – 2025)</div>
-            <button class="modal-close-btn" id="btn-close-district-modal" aria-label="Đóng">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
+      <div class="sidebar-content">
+        <!-- Status Indicator Panel -->
+        <div class="status-panel success" id="status-panel">
+          <span class="status-indicator"></span>
+          <span id="status-text" data-i18n="connecting">Đang kết nối hệ thống...</span>
+        </div>
+
+        <!-- Dynamic Year Selector -->
+        <div class="year-group">
+          <div class="section-label" data-i18n="analysisYear">Năm phân tích</div>
+          <div class="year-select-wrapper">
+            <span class="year-select-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-            </button>
+            </span>
+            <select id="year-select" aria-label="Chọn năm phân tích">
+              <option value="2025" selected id="opt-year-2025">2025 (Mặc định)</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+              <option value="2020">2020</option>
+              <option value="2019">2019</option>
+              <option value="2018">2018</option>
+            </select>
           </div>
-          <div class="modal-body">
-            <div class="modal-controls">
-              <label style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-                <span data-i18n="districtLabel">Quận / Huyện:</span>
-                <select id="district-select" class="compare-select" style="font-size: 0.82rem; padding: 5px 10px;">
-                  <!-- Populated via JS -->
-                </select>
-              </label>
-              <div style="display: flex; gap: 6px; margin-left: auto;">
-                <button class="chart-tab-btn active" data-metric="lst" data-i18n="chartTabLst">Nhiệt độ (LST °C)</button>
-                <button class="chart-tab-btn" data-metric="ndvi" data-i18n="chartTabNdvi">Mảng xanh (NDVI)</button>
-                <button class="chart-tab-btn" data-metric="utfvi" data-i18n="chartTabUtfvi">Tổn thương (UTFVI)</button>
+        </div>
+
+        <!-- Focus Mode Toggle -->
+        <div class="mode-group">
+          <div class="section-label" data-i18n="displayMode">Hiển thị</div>
+          <div class="mode-toggle-row" id="btn-focus-mode">
+            <span class="mode-title" data-i18n="focusMode">Tập trung chỉ số (Focus)</span>
+            <label class="switch">
+              <input type="checkbox" id="focus-mode-checkbox">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Interactive Layers Menu -->
+        <div class="layers-group">
+          <div class="section-label" data-i18n="layersSection">Lớp bản đồ phân tích</div>
+          <div class="layer-cards-list">
+            <!-- Card NDVI -->
+            <div class="control-card active" id="btn-ndvi">
+              <div class="control-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m12 2-8 10h5l-4 8h14l-4-8h5z" />
+                  <path d="M12 20v2" />
+                </svg>
+              </div>
+              <span class="control-name" data-i18n="layerNdvi">Mảng xanh (NDVI)</span>
+            </div>
+
+            <!-- Card LST -->
+            <div class="control-card" id="btn-lst">
+              <div class="control-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+                </svg>
+              </div>
+              <span class="control-name" data-i18n="layerLst">Nhiệt độ bề mặt (LST)</span>
+            </div>
+
+            <!-- Card UTFVI -->
+            <div class="control-card" id="btn-utfvi">
+              <div class="control-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <span class="control-name" data-i18n="layerUtfvi">Tổn thương sinh thái (UTFVI)</span>
+            </div>
+            <!-- Advanced Analytics Tools -->
+            <div class="layers-group">
+              <div class="section-label" data-i18n="advancedTools">Công cụ phân tích nâng cao</div>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <button class="tool-btn" id="btn-open-compare" title="So sánh song song 2 mốc thời gian">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="12" y1="3" x2="12" y2="21" />
+                  </svg>
+                  <span data-i18n="compareTool">So sánh 2 năm (Split-Screen)</span>
+                </button>
+
+                <button class="tool-btn" id="btn-open-district-chart" title="Xem biểu đồ biến thiên 2018 - 2025">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                  </svg>
+                  <span data-i18n="districtChartTool">Biểu đồ chuỗi thời gian Quận/Huyện</span>
+                </button>
               </div>
             </div>
-            <div class="chart-container-box">
-              <canvas id="district-chart"></canvas>
-            </div>
           </div>
+
+          <footer class="sidebar-footer">
+            © 2026–2027 LQD_Nhóm 48. All rights reserved.
+          </footer>
+    </aside>
+
+    <!-- Map Viewer Section (Occupies 85-90%+ of Viewport) -->
+    <main class="map-container">
+      <!-- Leaflet Map Container -->
+      <div id="map"></div>
+
+      <!-- Skeleton Loading Toast (Replaces obstructive black spinner) -->
+      <div class="map-skeleton-overlay" id="map-spinner">
+        <div class="skeleton-shimmer-box"></div>
+        <span class="skeleton-text" data-i18n="renderingTiles">Đang kết xuất tile GEE...</span>
+      </div>
+
+      <!-- Compact Horizontal Floating Gradient Colorbar (Bottom-Right) -->
+      <div class="floating-legend-bar" id="dynamic-legend">
+        <!-- Populated dynamically via JS -->
+      </div>
+
+      <!-- Error Notification Banner -->
+      <div class="error-banner" id="error-banner">
+        <div class="error-content">
+          <div class="error-title" data-i18n="geeErrorTitle">Lỗi kết nối GEE</div>
+          <div class="error-desc" id="error-message" data-i18n="geeErrorDesc">Mất kết nối với Google Earth Engine.</div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Split-Screen Compare Mode Overlay -->
+    <div class="compare-overlay" id="compare-overlay">
+      <div class="compare-topbar">
+        <div class="compare-title-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="12" y1="3" x2="12" y2="21" />
+          </svg>
+          <span data-i18n="compareTitle">So sánh song song 2 mốc thời gian (Đồng bộ thời gian thực 60fps)</span>
+        </div>
+        <div class="compare-ctrl-group">
+          <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+            <span data-i18n="compareLeft">Trái:</span>
+            <select id="compare-year-left" class="compare-select">
+              <option value="2018" selected>2018</option>
+              <option value="2019">2019</option>
+              <option value="2020">2020</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+            </select>
+          </label>
+          <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+            <span data-i18n="compareRight">Phải:</span>
+            <select id="compare-year-right" class="compare-select">
+              <option value="2018">2018</option>
+              <option value="2019">2019</option>
+              <option value="2020">2020</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025" selected>2025</option>
+            </select>
+          </label>
+          <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+            <span data-i18n="compareLayer">Lớp:</span>
+            <select id="compare-layer-select" class="compare-select">
+              <option value="lst" selected id="opt-layer-lst">Nhiệt độ (LST)</option>
+              <option value="ndvi" id="opt-layer-ndvi">Mảng xanh (NDVI)</option>
+              <option value="utfvi" id="opt-layer-utfvi">Tổn thương (UTFVI)</option>
+            </select>
+          </label>
+          <button class="compare-btn-close" id="btn-close-compare" data-i18n="closeCompare">✕ Đóng so sánh</button>
+        </div>
+      </div>
+      <div class="compare-maps-wrapper">
+        <div class="compare-pane" id="compare-map-left">
+          <div class="compare-label-tag compare-label-left" id="label-map-left">2018 - LST</div>
+        </div>
+        <div class="compare-pane-divider"></div>
+        <div class="compare-pane" id="compare-map-right">
+          <div class="compare-label-tag compare-label-right" id="label-map-right">2025 - LST</div>
         </div>
       </div>
     </div>
 
-    <!-- Leaflet Library -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Entry Script for Web App -->
-    <script type="module" src="./src/main.js"></script>
-  </body>
+    <!-- District Regional Time-Series Modal -->
+    <div class="modal-backdrop" id="district-modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title" data-i18n="districtModalTitle">Biểu đồ xu hướng biến thiên Đảo nhiệt (2018 – 2025)
+          </div>
+          <button class="modal-close-btn" id="btn-close-district-modal" aria-label="Đóng">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-controls">
+            <label style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+              <span data-i18n="districtLabel">Quận / Huyện:</span>
+              <select id="district-select" class="compare-select" style="font-size: 0.82rem; padding: 5px 10px;">
+                <!-- Populated via JS -->
+              </select>
+            </label>
+            <div style="display: flex; gap: 6px; margin-left: auto;">
+              <button class="chart-tab-btn active" data-metric="lst" data-i18n="chartTabLst">Nhiệt độ (LST °C)</button>
+              <button class="chart-tab-btn" data-metric="ndvi" data-i18n="chartTabNdvi">Mảng xanh (NDVI)</button>
+              <button class="chart-tab-btn" data-metric="utfvi" data-i18n="chartTabUtfvi">Tổn thương (UTFVI)</button>
+            </div>
+          </div>
+          <div class="chart-container-box">
+            <canvas id="district-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Library -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Entry Script for Web App -->
+  <script type="module" src="./src/main.js"></script>
+</body>
+
 </html>
