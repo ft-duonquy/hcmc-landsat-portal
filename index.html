@@ -926,6 +926,29 @@
         color: #38bdf8;
       }
 
+      .lang-switch-btn {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #94a3b8;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+      }
+      .lang-switch-btn:hover {
+        border-color: #38bdf8;
+        color: #38bdf8;
+      }
+      .lang-badge {
+        font-weight: 700;
+        color: #38bdf8;
+      }
+
       /* Mobile Drawer Optimization */
       @media (max-width: 768px) {
         .sidebar {
@@ -978,7 +1001,7 @@
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
           <line x1="9" y1="3" x2="9" y2="21"/>
         </svg>
-        <span>Bảng điều khiển</span>
+        <span data-i18n="controlPanel">Bảng điều khiển</span>
       </button>
 
       <!-- Floating Toolbar / Collapsible Sidebar (280px, Slate Dark) -->
@@ -986,26 +1009,32 @@
         <div class="sidebar-header">
           <div>
             <h1 class="brand-title">HCMC Landsat Portal</h1>
-            <div class="brand-subtitle">Giám sát Đảo nhiệt Đô thị TP.HCM</div>
+            <div class="brand-subtitle" data-i18n="brandSubtitle">Giám sát Đảo nhiệt Đô thị TP.HCM</div>
           </div>
-          <button class="close-sidebar-btn" id="close-sidebar-btn" title="Thu gọn thanh điều khiển" aria-label="Đóng">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button class="lang-switch-btn" id="lang-toggle-btn" title="Chuyển đổi ngôn ngữ / Switch language" aria-label="Language switch">
+              <span class="lang-badge" id="lang-current-label">VI</span>
+              <span style="font-size: 0.65rem; color: #64748b;">| EN</span>
+            </button>
+            <button class="close-sidebar-btn" id="close-sidebar-btn" title="Thu gọn thanh điều khiển" aria-label="Đóng">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div class="sidebar-content">
           <!-- Status Indicator Panel -->
           <div class="status-panel success" id="status-panel">
             <span class="status-indicator"></span>
-            <span id="status-text">Đang kết nối hệ thống...</span>
+            <span id="status-text" data-i18n="connecting">Đang kết nối hệ thống...</span>
           </div>
 
           <!-- Dynamic Year Selector -->
           <div class="year-group">
-            <div class="section-label">Năm phân tích</div>
+            <div class="section-label" data-i18n="analysisYear">Năm phân tích</div>
             <div class="year-select-wrapper">
               <span class="year-select-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -1017,7 +1046,7 @@
                 </svg>
               </span>
               <select id="year-select" aria-label="Chọn năm phân tích">
-                <option value="2025" selected>2025 (Mặc định)</option>
+                <option value="2025" selected id="opt-year-2025">2025 (Mặc định)</option>
                 <option value="2024">2024</option>
                 <option value="2023">2023</option>
                 <option value="2022">2022</option>
@@ -1031,9 +1060,9 @@
           
           <!-- Focus Mode Toggle -->
           <div class="mode-group">
-            <div class="section-label">Hiển thị</div>
+            <div class="section-label" data-i18n="displayMode">Hiển thị</div>
             <div class="mode-toggle-row" id="btn-focus-mode">
-              <span class="mode-title">Tập trung chỉ số (Focus)</span>
+              <span class="mode-title" data-i18n="focusMode">Tập trung chỉ số (Focus)</span>
               <label class="switch">
                 <input type="checkbox" id="focus-mode-checkbox">
                 <span class="slider"></span>
@@ -1043,7 +1072,7 @@
           
           <!-- Interactive Layers Menu -->
           <div class="layers-group">
-            <div class="section-label">Lớp bản đồ phân tích</div>
+            <div class="section-label" data-i18n="layersSection">Lớp bản đồ phân tích</div>
             <div class="layer-cards-list">
               <!-- Card NDVI -->
               <div class="control-card active" id="btn-ndvi">
@@ -1053,7 +1082,7 @@
                     <path d="M12 20v2"/>
                   </svg>
                 </div>
-                <span class="control-name">Mảng xanh (NDVI)</span>
+                <span class="control-name" data-i18n="layerNdvi">Mảng xanh (NDVI)</span>
               </div>
 
               <!-- Card LST -->
@@ -1063,7 +1092,7 @@
                     <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
                   </svg>
                 </div>
-                <span class="control-name">Nhiệt độ bề mặt (LST)</span>
+                <span class="control-name" data-i18n="layerLst">Nhiệt độ bề mặt (LST)</span>
               </div>
 
               <!-- Card UTFVI -->
@@ -1075,18 +1104,18 @@
                     <line x1="12" y1="17" x2="12.01" y2="17"/>
                   </svg>
                 </div>
-                <span class="control-name">Tổn thương sinh thái (UTFVI)</span>
+                <span class="control-name" data-i18n="layerUtfvi">Tổn thương sinh thái (UTFVI)</span>
               </div>
           <!-- Advanced Analytics Tools -->
           <div class="layers-group">
-            <div class="section-label">Công cụ phân tích nâng cao</div>
+            <div class="section-label" data-i18n="advancedTools">Công cụ phân tích nâng cao</div>
             <div style="display: flex; flex-direction: column; gap: 4px;">
               <button class="tool-btn" id="btn-open-compare" title="So sánh song song 2 mốc thời gian">
                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2"/>
                   <line x1="12" y1="3" x2="12" y2="21"/>
                 </svg>
-                <span>So sánh 2 năm (Split-Screen)</span>
+                <span data-i18n="compareTool">So sánh 2 năm (Split-Screen)</span>
               </button>
 
               <button class="tool-btn" id="btn-open-district-chart" title="Xem biểu đồ biến thiên 2018 - 2025">
@@ -1095,7 +1124,7 @@
                   <line x1="12" y1="20" x2="12" y2="4"/>
                   <line x1="6" y1="20" x2="6" y2="14"/>
                 </svg>
-                <span>Biểu đồ chuỗi thời gian Quận/Huyện</span>
+                <span data-i18n="districtChartTool">Biểu đồ chuỗi thời gian Quận/Huyện</span>
               </button>
             </div>
           </div>
@@ -1114,7 +1143,7 @@
         <!-- Skeleton Loading Toast (Replaces obstructive black spinner) -->
         <div class="map-skeleton-overlay" id="map-spinner">
           <div class="skeleton-shimmer-box"></div>
-          <span class="skeleton-text">Đang kết xuất tile GEE...</span>
+          <span class="skeleton-text" data-i18n="renderingTiles">Đang kết xuất tile GEE...</span>
         </div>
 
         <!-- Compact Horizontal Floating Gradient Colorbar (Bottom-Right) -->
@@ -1125,8 +1154,8 @@
         <!-- Error Notification Banner -->
         <div class="error-banner" id="error-banner">
           <div class="error-content">
-            <div class="error-title">Lỗi kết nối GEE</div>
-            <div class="error-desc" id="error-message">Mất kết nối với Google Earth Engine.</div>
+            <div class="error-title" data-i18n="geeErrorTitle">Lỗi kết nối GEE</div>
+            <div class="error-desc" id="error-message" data-i18n="geeErrorDesc">Mất kết nối với Google Earth Engine.</div>
           </div>
         </div>
       </main>
@@ -1139,11 +1168,11 @@
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <line x1="12" y1="3" x2="12" y2="21"/>
             </svg>
-            <span>So sánh song song 2 mốc thời gian (Đồng bộ thời gian thực 60fps)</span>
+            <span data-i18n="compareTitle">So sánh song song 2 mốc thời gian (Đồng bộ thời gian thực 60fps)</span>
           </div>
           <div class="compare-ctrl-group">
             <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
-              Trái:
+              <span data-i18n="compareLeft">Trái:</span>
               <select id="compare-year-left" class="compare-select">
                 <option value="2018" selected>2018</option>
                 <option value="2019">2019</option>
@@ -1156,7 +1185,7 @@
               </select>
             </label>
             <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
-              Phải:
+              <span data-i18n="compareRight">Phải:</span>
               <select id="compare-year-right" class="compare-select">
                 <option value="2018">2018</option>
                 <option value="2019">2019</option>
@@ -1169,14 +1198,14 @@
               </select>
             </label>
             <label style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
-              Lớp:
+              <span data-i18n="compareLayer">Lớp:</span>
               <select id="compare-layer-select" class="compare-select">
-                <option value="lst" selected>Nhiệt độ (LST)</option>
-                <option value="ndvi">Mảng xanh (NDVI)</option>
-                <option value="utfvi">Tổn thương (UTFVI)</option>
+                <option value="lst" selected id="opt-layer-lst">Nhiệt độ (LST)</option>
+                <option value="ndvi" id="opt-layer-ndvi">Mảng xanh (NDVI)</option>
+                <option value="utfvi" id="opt-layer-utfvi">Tổn thương (UTFVI)</option>
               </select>
             </label>
-            <button class="compare-btn-close" id="btn-close-compare">✕ Đóng so sánh</button>
+            <button class="compare-btn-close" id="btn-close-compare" data-i18n="closeCompare">✕ Đóng so sánh</button>
           </div>
         </div>
         <div class="compare-maps-wrapper">
@@ -1194,7 +1223,7 @@
       <div class="modal-backdrop" id="district-modal">
         <div class="modal-dialog">
           <div class="modal-header">
-            <div class="modal-title">Biểu đồ xu hướng biến thiên Đảo nhiệt (2018 – 2025)</div>
+            <div class="modal-title" data-i18n="districtModalTitle">Biểu đồ xu hướng biến thiên Đảo nhiệt (2018 – 2025)</div>
             <button class="modal-close-btn" id="btn-close-district-modal" aria-label="Đóng">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/>
@@ -1205,15 +1234,15 @@
           <div class="modal-body">
             <div class="modal-controls">
               <label style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-                Quận / Huyện:
+                <span data-i18n="districtLabel">Quận / Huyện:</span>
                 <select id="district-select" class="compare-select" style="font-size: 0.82rem; padding: 5px 10px;">
                   <!-- Populated via JS -->
                 </select>
               </label>
               <div style="display: flex; gap: 6px; margin-left: auto;">
-                <button class="chart-tab-btn active" data-metric="lst">Nhiệt độ (LST °C)</button>
-                <button class="chart-tab-btn" data-metric="ndvi">Mảng xanh (NDVI)</button>
-                <button class="chart-tab-btn" data-metric="utfvi">Tổn thương (UTFVI)</button>
+                <button class="chart-tab-btn active" data-metric="lst" data-i18n="chartTabLst">Nhiệt độ (LST °C)</button>
+                <button class="chart-tab-btn" data-metric="ndvi" data-i18n="chartTabNdvi">Mảng xanh (NDVI)</button>
+                <button class="chart-tab-btn" data-metric="utfvi" data-i18n="chartTabUtfvi">Tổn thương (UTFVI)</button>
               </div>
             </div>
             <div class="chart-container-box">

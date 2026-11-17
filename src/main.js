@@ -5,6 +5,177 @@
 
 console.log('Khởi chạy ứng dụng Web GIS phân tích đảo nhiệt đô thị (UHI) TP.HCM...');
 
+// ─── Internationalization (i18n: VI / EN) ──────────────────────
+const I18N_DICT = {
+  vi: {
+    brandSubtitle: 'Giám sát Đảo nhiệt Đô thị TP.HCM',
+    controlPanel: 'Bảng điều khiển',
+    connecting: 'Đang kết nối hệ thống...',
+    ready: 'Sẵn sàng. Chọn một lớp bản đồ phân tích.',
+    analysisYear: 'Năm phân tích',
+    defaultYear: '2025 (Mặc định)',
+    displayMode: 'Hiển thị',
+    focusMode: 'Tập trung chỉ số (Focus)',
+    layersSection: 'Lớp bản đồ phân tích',
+    layerNdvi: 'Mảng xanh (NDVI)',
+    layerLst: 'Nhiệt độ bề mặt (LST)',
+    layerUtfvi: 'Tổn thương sinh thái (UTFVI)',
+    advancedTools: 'Công cụ phân tích nâng cao',
+    compareTool: 'So sánh 2 năm (Split-Screen)',
+    districtChartTool: 'Biểu đồ chuỗi thời gian Quận/Huyện',
+    renderingTiles: 'Đang kết xuất tile GEE...',
+    geeErrorTitle: 'Lỗi kết nối GEE',
+    geeErrorDesc: 'Mất kết nối với Google Earth Engine.',
+    compareTitle: 'So sánh song song 2 mốc thời gian (Đồng bộ thời gian thực 60fps)',
+    compareLeft: 'Trái:',
+    compareRight: 'Phải:',
+    compareLayer: 'Lớp:',
+    closeCompare: '✕ Đóng so sánh',
+    districtModalTitle: 'Biểu đồ xu hướng biến thiên Đảo nhiệt (2018 – 2025)',
+    districtLabel: 'Quận / Huyện:',
+    chartTabLst: 'Nhiệt độ (LST °C)',
+    chartTabNdvi: 'Mảng xanh (NDVI)',
+    chartTabUtfvi: 'Tổn thương (UTFVI)',
+    pointQueryTitle: 'Truy vấn tọa độ',
+    pointQuerySampling: (yr) => `Đang lấy mẫu raster GEE (Năm ${yr})...`,
+    pointQueryOutRoi: 'Điểm nằm ngoài phạm vi quan trắc TP.HCM.',
+    pointQueryPixelTitle: (yr) => `Chỉ số Pixel (${yr})`,
+    pointQueryLst: 'Nhiệt độ bề mặt (LST):',
+    pointQueryNdvi: 'Chỉ số mảng xanh (NDVI):',
+    pointQueryUtfvi: 'Tổn thương nhiệt (UTFVI):',
+    pointQueryUhi: 'Mức đảo nhiệt:',
+    pointQueryError: 'Lỗi kết nối',
+    pointQueryErrorMsg: (msg) => `Không thể tải dữ liệu pixel: ${msg}`,
+    loadingLayer: (layer, yr) => `Đang tải lớp ${layer} (${yr}) từ GEE...`,
+    loadedLayer: (layer, yr) => `Lớp: ${layer} — Năm ${yr}`,
+    tileError: t('tileError'),
+    chartLstTitle: 'Nhiệt độ bề mặt trung bình (°C)',
+    chartNdviTitle: 'Chỉ số thực vật trung bình (NDVI)',
+    chartUtfviTitle: 'Mức tổn thương sinh thái (UTFVI Class)',
+    optLst: 'Nhiệt độ (LST)',
+    optNdvi: 'Mảng xanh (NDVI)',
+    optUtfvi: 'Tổn thương (UTFVI)',
+    legendNdvi0: '0.0 Đất trống',
+    legendNdvi5: '0.5+ Cây dày',
+    legendLstCool: '26°C Mát mẻ',
+    legendLstHot: '38°C+ Rất nóng',
+    legendUtfviGood: 'Tốt (< 0)',
+    legendUtfviNorm: 'Trung bình',
+    legendUtfviCrit: 'Nguy kịch (> 0.02)'
+  },
+  en: {
+    brandSubtitle: 'HCMC Urban Heat Island Monitoring',
+    controlPanel: 'Control Panel',
+    connecting: 'Connecting to system...',
+    ready: 'Ready. Select an analytical map layer.',
+    analysisYear: 'Analysis Year',
+    defaultYear: '2025 (Default)',
+    displayMode: 'Display Mode',
+    focusMode: 'Focus Mode (Indices)',
+    layersSection: 'Analytical Map Layers',
+    layerNdvi: 'Vegetation Cover (NDVI)',
+    layerLst: 'Surface Temperature (LST)',
+    layerUtfvi: 'Thermal Vulnerability (UTFVI)',
+    advancedTools: 'Advanced Analytics Tools',
+    compareTool: 'Split-Screen Comparison (2 Years)',
+    districtChartTool: 'District Time-Series Chart',
+    renderingTiles: 'Rendering GEE raster tiles...',
+    geeErrorTitle: 'GEE Connection Error',
+    geeErrorDesc: 'Lost connection to Google Earth Engine.',
+    compareTitle: 'Side-by-Side Dual-Year Comparison (60fps Real-Time Sync)',
+    compareLeft: 'Left:',
+    compareRight: 'Right:',
+    compareLayer: 'Layer:',
+    closeCompare: '✕ Close Comparison',
+    districtModalTitle: 'Urban Heat Island Multi-Year Trend (2018 – 2025)',
+    districtLabel: 'District / Area:',
+    chartTabLst: 'Temperature (LST °C)',
+    chartTabNdvi: 'Vegetation (NDVI)',
+    chartTabUtfvi: 'Vulnerability (UTFVI)',
+    pointQueryTitle: 'Coordinate Inspector',
+    pointQuerySampling: (yr) => `Sampling GEE raster values (Year ${yr})...`,
+    pointQueryOutRoi: 'Location is outside the HCMC observation boundary.',
+    pointQueryPixelTitle: (yr) => `Pixel Values (${yr})`,
+    pointQueryLst: 'Surface Temp (LST):',
+    pointQueryNdvi: 'Vegetation Index (NDVI):',
+    pointQueryUtfvi: 'Thermal Vulnerability (UTFVI):',
+    pointQueryUhi: 'UHI Intensity:',
+    pointQueryError: 'Connection Error',
+    pointQueryErrorMsg: (msg) => `Failed to fetch pixel data: ${msg}`,
+    loadingLayer: (layer, yr) => `Loading ${layer} (${yr}) from GEE...`,
+    loadedLayer: (layer, yr) => `Layer: ${layer} — Year ${yr}`,
+    tileError: 'Error loading some map tiles.',
+    chartLstTitle: 'Mean Surface Temperature (°C)',
+    chartNdviTitle: 'Mean Vegetation Index (NDVI)',
+    chartUtfviTitle: 'Ecological Vulnerability (UTFVI Class)',
+    optLst: 'Temperature (LST)',
+    optNdvi: 'Vegetation (NDVI)',
+    optUtfvi: 'Vulnerability (UTFVI)',
+    legendNdvi0: '0.0 Barren land',
+    legendNdvi5: '0.5+ Dense canopy',
+    legendLstCool: '26°C Cool',
+    legendLstHot: '38°C+ Hotspot',
+    legendUtfviGood: 'Good (< 0)',
+    legendUtfviNorm: 'Moderate',
+    legendUtfviCrit: 'Critical (> 0.02)'
+  }
+};
+
+let currentLang = localStorage.getItem('hcmc_landsat_lang') || 'vi';
+
+function t(key, ...args) {
+  const dict = I18N_DICT[currentLang] || I18N_DICT.vi;
+  const val = dict[key] ?? I18N_DICT.vi[key] ?? key;
+  if (typeof val === 'function') return val(...args);
+  return val;
+}
+
+function updateUILanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('hcmc_landsat_lang', lang);
+
+  // Update language switcher badge
+  const langLabel = document.getElementById('lang-current-label');
+  if (langLabel) langLabel.textContent = lang.toUpperCase();
+
+  // Update elements with data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key && I18N_DICT[lang] && I18N_DICT[lang][key]) {
+      el.textContent = I18N_DICT[lang][key];
+    }
+  });
+
+  // Update specific dropdown options
+  const optYear2025 = document.getElementById('opt-year-2025');
+  if (optYear2025) optYear2025.textContent = t('defaultYear');
+
+  const optLst = document.getElementById('opt-layer-lst');
+  if (optLst) optLst.textContent = t('optLst');
+  const optNdvi = document.getElementById('opt-layer-ndvi');
+  if (optNdvi) optNdvi.textContent = t('optNdvi');
+  const optUtfvi = document.getElementById('opt-layer-utfvi');
+  if (optUtfvi) optUtfvi.textContent = t('optUtfvi');
+
+  // Re-render legend if active
+  if (currentLayerKey) {
+    renderLegend(currentLayerKey);
+    const names = {
+      ndvi: t('layerNdvi'),
+      lst: t('layerLst'),
+      utfvi: t('layerUtfvi')
+    };
+    updateStatus(t('loadedLayer', names[currentLayerKey], yearSelect.value), 'success');
+  }
+
+  // Re-render district chart if modal is active
+  if (districtModal && districtModal.classList.contains('active')) {
+    const selectedDistrict = districtSelect.value || 'Quận 1';
+    renderDistrictChart(selectedDistrict, currentChartMetric);
+  }
+}
+
+
 // ─── Constants ───────────────────────────────────────────────
 const HCMC_CENTER  = [10.762622, 106.660172];
 const DEFAULT_ZOOM = 11;
@@ -342,43 +513,43 @@ function renderLegend(layerType) {
   const templates = {
     ndvi: `
       <div class="legend-header-line">
-        <span class="legend-bar-title">Mảng xanh (NDVI)</span>
+        <span class="legend-bar-title">${t('layerNdvi')}</span>
         <span class="legend-bar-unit">-0.1 → 0.6+</span>
       </div>
       <div class="legend-gradient-track ndvi-bar"></div>
       <div class="legend-labels-row">
-        <span>0.0 Đất trống</span>
+        <span>${t('legendNdvi0')}</span>
         <span>0.25</span>
-        <span>0.5+ Cây dày</span>
+        <span>${t('legendNdvi5')}</span>
       </div>`,
     lst: `
       <div class="legend-header-line">
-        <span class="legend-bar-title">Nhiệt độ bề mặt (LST)</span>
+        <span class="legend-bar-title">${t('layerLst')}</span>
         <span class="legend-bar-unit">°C</span>
       </div>
       <div class="legend-gradient-track lst-bar"></div>
       <div class="legend-labels-row">
-        <span>26°C Mát mẻ</span>
+        <span>${t('legendLstCool')}</span>
         <span>32°C</span>
-        <span>38°C+ Rất nóng</span>
+        <span>${t('legendLstHot')}</span>
       </div>`,
     utfvi: `
       <div class="legend-header-line">
-        <span class="legend-bar-title">Chỉ số sinh thái (UTFVI)</span>
+        <span class="legend-bar-title">${t('layerUtfvi')}</span>
         <span class="legend-bar-unit">&lt; 0.000 → &gt; 0.020</span>
       </div>
       <div class="utfvi-steps-bar">
-        <div class="utfvi-step" style="background:#008000" title="< 0.000: Rất tốt"></div>
-        <div class="utfvi-step" style="background:#90EE90" title="0.000–0.005: Tốt"></div>
-        <div class="utfvi-step" style="background:#FFFF00" title="0.005–0.010: Trung bình"></div>
-        <div class="utfvi-step" style="background:#FFA500" title="0.010–0.015: Xấu"></div>
-        <div class="utfvi-step" style="background:#FF0000" title="0.015–0.020: Rất xấu"></div>
-        <div class="utfvi-step" style="background:#800080" title="> 0.020: Nguy kịch"></div>
+        <div class="utfvi-step" style="background:#008000"></div>
+        <div class="utfvi-step" style="background:#90EE90"></div>
+        <div class="utfvi-step" style="background:#FFFF00"></div>
+        <div class="utfvi-step" style="background:#FFA500"></div>
+        <div class="utfvi-step" style="background:#FF0000"></div>
+        <div class="utfvi-step" style="background:#800080"></div>
       </div>
       <div class="legend-labels-row">
-        <span>Tốt (&lt; 0)</span>
-        <span>Trung bình</span>
-        <span>Nguy kịch (&gt; 0.02)</span>
+        <span>${t('legendUtfviGood')}</span>
+        <span>${t('legendUtfviNorm')}</span>
+        <span>${t('legendUtfviCrit')}</span>
       </div>`
   };
 
@@ -400,7 +571,7 @@ async function loadGMapLayer(layerKey, displayName, forceReload = false) {
   const year = parseInt(yearSelect.value, 10);
 
   setMapLoading(true);
-  updateStatus(`Đang tải lớp ${displayName} (${year}) từ GEE...`, 'loading');
+  updateStatus(t('loadingLayer', displayName, year), 'loading');
 
   try {
     const response = await fetch(`/api/map/${layerKey}?year=${year}`);
@@ -433,7 +604,7 @@ async function loadGMapLayer(layerKey, displayName, forceReload = false) {
     tileLayer.on('loading', ()  => setMapLoading(true));
     tileLayer.on('load',    ()  => {
       setMapLoading(false);
-      updateStatus(`Lớp: ${displayName} — Năm ${year}`, 'success');
+      updateStatus(t('loadedLayer', displayName, year), 'success');
     });
     tileLayer.on('tileerror', (e) => {
       console.warn('Tile error:', e);
@@ -523,12 +694,12 @@ map.on('click', async (e) => {
     .setContent(`
       <div class="inspector-card">
         <div class="inspector-header">
-          <span class="inspector-title">Truy vấn tọa độ</span>
+          <span class="inspector-title">${t('pointQueryTitle')}</span>
           <span class="inspector-coord">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
         </div>
         <div style="display:flex; align-items:center; gap:6px; font-size:0.74rem; color:#94a3b8; padding: 6px 0;">
           <span class="status-indicator warning" style="animation: pulse 1s infinite;"></span>
-          Đang lấy mẫu raster GEE (Năm ${currentYear})...
+          ${t('pointQuerySampling', currentYear)}
         </div>
       </div>
     `)
@@ -546,7 +717,7 @@ map.on('click', async (e) => {
             <span class="inspector-coord">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
           </div>
           <div style="font-size:0.74rem; color:#f87171; padding: 4px 0;">
-            ${data.message || 'Điểm nằm ngoài phạm vi quan trắc TP.HCM.'}
+            ${currentLang === 'en' ? 'Point is outside HCMC observation boundary.' : (data.message || t('pointQueryOutRoi'))}
           </div>
         </div>
       `);
@@ -556,26 +727,26 @@ map.on('click', async (e) => {
     inspectorPopup.setContent(`
       <div class="inspector-card">
         <div class="inspector-header">
-          <span class="inspector-title">Chỉ số Pixel (${data.year})</span>
+          <span class="inspector-title">${t('pointQueryPixelTitle', data.year)}</span>
           <span class="inspector-coord">${data.lat}, ${data.lng}</span>
         </div>
         <div class="inspector-grid">
           <div class="inspector-row">
-            <span class="inspector-label">Nhiệt độ bề mặt (LST):</span>
+            <span class="inspector-label">${t('pointQueryLst')}</span>
             <span class="inspector-val" style="color: #f87171;">${data.lst} °C</span>
           </div>
           <div class="inspector-row">
-            <span class="inspector-label">Chỉ số mảng xanh (NDVI):</span>
+            <span class="inspector-label">${t('pointQueryNdvi')}</span>
             <span class="inspector-val" style="color: #4ade80;">${data.ndvi}</span>
           </div>
           <div class="inspector-row">
-            <span class="inspector-label">Tổn thương nhiệt (UTFVI):</span>
+            <span class="inspector-label">${t('pointQueryUtfvi')}</span>
             <span class="inspector-badge" style="background-color: ${data.utfviColor}; color: ${data.utfviClass >= 3 ? '#ffffff' : '#0f172a'};">
               ${data.utfviLabel}
             </span>
           </div>
           <div class="inspector-row" style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
-            <span>Mức đảo nhiệt:</span>
+            <span>${t('pointQueryUhi')}</span>
             <span style="font-weight:600; color:#cbd5e1;">${data.utfviUhi}</span>
           </div>
         </div>
@@ -586,9 +757,9 @@ map.on('click', async (e) => {
       inspectorPopup.setContent(`
         <div class="inspector-card">
           <div class="inspector-header">
-            <span class="inspector-title">Lỗi kết nối</span>
+            <span class="inspector-title">${t('pointQueryError')}</span>
           </div>
-          <div style="font-size:0.72rem; color:#f87171;">Không thể tải dữ liệu pixel: ${err.message}</div>
+          <div style="font-size:0.72rem; color:#f87171;">${t('pointQueryErrorMsg', err.message)}</div>
         </div>
       `);
     }
@@ -770,7 +941,7 @@ function renderDistrictChart(districtName, metric) {
 
   const metricConfigs = {
     lst: {
-      label: 'Nhiệt độ bề mặt trung bình (°C)',
+      label: t('chartLstTitle'),
       data: distInfo.lst,
       borderColor: '#f87171',
       bgColor: 'rgba(248, 113, 113, 0.15)',
@@ -779,7 +950,7 @@ function renderDistrictChart(districtName, metric) {
       max: 40
     },
     ndvi: {
-      label: 'Chỉ số thực vật trung bình (NDVI)',
+      label: t('chartNdviTitle'),
       data: distInfo.ndvi,
       borderColor: '#4ade80',
       bgColor: 'rgba(74, 222, 128, 0.15)',
@@ -788,7 +959,7 @@ function renderDistrictChart(districtName, metric) {
       max: 0.8
     },
     utfvi: {
-      label: 'Mức tổn thương sinh thái (UTFVI Class)',
+      label: t('chartUtfviTitle'),
       data: distInfo.utfvi,
       borderColor: '#c084fc',
       bgColor: 'rgba(192, 132, 252, 0.15)',
@@ -900,25 +1071,37 @@ chartTabBtns.forEach(btn => {
 
 // ─── Initialization ───────────────────────────────────────────
 function init() {
-  updateStatus('Sẵn sàng. Chọn một lớp bản đồ phân tích.', 'success');
+  // Language switcher toggle button
+  const langToggleBtn = document.getElementById('lang-toggle-btn');
+  if (langToggleBtn) {
+    langToggleBtn.addEventListener('click', () => {
+      const nextLang = currentLang === 'vi' ? 'en' : 'vi';
+      updateUILanguage(nextLang);
+    });
+  }
+
+  // Apply initial saved language
+  updateUILanguage(currentLang);
+
+  updateStatus(t('ready'), 'success');
 
   // Layer control cards
   document.getElementById('btn-ndvi').addEventListener('click', () =>
-    loadGMapLayer('ndvi', 'Mảng xanh (NDVI)'));
+    loadGMapLayer('ndvi', t('layerNdvi')));
 
   document.getElementById('btn-lst').addEventListener('click', () =>
-    loadGMapLayer('lst', 'Nhiệt độ bề mặt (LST)'));
+    loadGMapLayer('lst', t('layerLst')));
 
   document.getElementById('btn-utfvi').addEventListener('click', () =>
-    loadGMapLayer('utfvi', 'Tổn thương sinh thái (UTFVI)'));
+    loadGMapLayer('utfvi', t('layerUtfvi')));
 
   // Year selector — re-fetch the currently active layer when year changes
   yearSelect.addEventListener('change', () => {
     if (currentLayerKey) {
       const names = {
-        ndvi:  'Mảng xanh (NDVI)',
-        lst:   'Nhiệt độ bề mặt (LST)',
-        utfvi: 'Tổn thương sinh thái (UTFVI)'
+        ndvi:  t('layerNdvi'),
+        lst:   t('layerLst'),
+        utfvi: t('layerUtfvi')
       };
       // forceReload = true bypasses same-layer guard
       loadGMapLayer(currentLayerKey, names[currentLayerKey], true);
@@ -929,7 +1112,7 @@ function init() {
   fetchDistrictStats();
 
   // Load NDVI by default on startup
-  loadGMapLayer('ndvi', 'Mảng xanh (NDVI)');
+  loadGMapLayer('ndvi', t('layerNdvi'));
 }
 
 document.addEventListener('DOMContentLoaded', init);
